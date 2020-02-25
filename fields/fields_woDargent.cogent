@@ -1,0 +1,12 @@
+
+type SArr = U32
+type CanId = { id : U32, eff : U32 }
+type CanFrame = { ident : CanId }
+
+
+get_sid_eid : CanFrame! -> (U32, U32)
+get_sid_eid cframe =
+  let eff = (cframe.ident.eff , cframe.ident.id) in
+  eff
+
+

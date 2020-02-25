@@ -1,0 +1,11 @@
+
+type AB =
+  { a : U32 , b : U32}
+    layout 
+      record { a : 4B at 0B , b : 4B at 4B }
+
+
+id_AB : AB -> AB
+id_AB s = s 
+
+
