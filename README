@@ -10,16 +10,28 @@ Snippset to insert in generated files *_CorresSetup.thy:
 (TODO: modify the haskell files in cogent, or in a short-term,
 modify compile.sh so that it inserts this snippset)
 
+For branch dargentisa:
 
 instantiation array :: (cogent_C_val, finite) cogent_C_val
 begin
   definition val_rel_array_def:
-(*    "val_rel uv (x :: ('a,'b) array) \<equiv>*) 
-    " val_rel uv (x :: ('a,'b) array) \<equiv> 
-        (\<exists>(p:: 'a ptr) repr ptrl. uv = (UPtr (ptr_val p) repr ptrl))"
-  (* (\<exists>p repr ptrl. uv = (UPtr (ptr_val p) repr ptrl))"*)
+    " val_rel uv (x :: ('a,'b) array) ≡
+        (∃(p:: 'a ptr) repr ptrl. uv = (UPtr (ptr_val p) repr ptrl))"
    (* TODO: match ptrl with the array  *)
   definition type_rel_array_def:
-    "type_rel typ (_:: ('a,'b) array  itself) \<equiv> \<exists>repr ptrl. typ = RPtr repr ptrl \<and> type_rel repr TYPE('a)"
+    "type_rel typ (_:: ('a,'b) array  itself) ≡ ∃repr ptrl. typ = RPtr repr ptrl ∧ type_rel repr TYPE('a)"
+  instance ..
+end
+
+For branch dargent:
+
+instantiation array :: (cogent_C_val, finite) cogent_C_val
+begin
+  definition val_rel_array_def:
+    " val_rel uv (x :: ('a,'b) array) ≡
+        (∃(p:: 'a ptr) repr ptrl. uv = (UPtr (ptr_val p) repr ptrl))"
+   (* TODO: match ptrl with the array  *)
+  definition type_rel_array_def:
+    "type_rel typ (_:: ('a,'b) array  itself) ≡ ∃repr ptrl. typ = RPtr repr ptrl ∧ type_rel repr TYPE('a)"
   instance ..
 end
