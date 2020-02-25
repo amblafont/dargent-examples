@@ -1,0 +1,8 @@
+*.thy
+*#
+*~
+*.c
+*.h
+*.table
+BUILD_INFO
+ROOT
