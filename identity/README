@@ -1,0 +1,2 @@
+thy files compile with dargent-isa (except AllRefine.thy, because of a bug on
+which Vincent is working)
