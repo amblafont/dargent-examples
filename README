@@ -29,9 +29,10 @@ instantiation array :: (cogent_C_val, finite) cogent_C_val
 begin
   definition val_rel_array_def:
     " val_rel uv (x :: ('a,'b) array) ≡
-        (∃(p:: 'a ptr) repr ptrl. uv = (UPtr (ptr_val p) repr ptrl))"
+        (∃(p:: 'a ptr) repr . uv = (UPtr (ptr_val p) repr ))"
    (* TODO: match ptrl with the array  *)
   definition type_rel_array_def:
-    "type_rel typ (_:: ('a,'b) array  itself) ≡ ∃repr ptrl. typ = RPtr repr ptrl ∧ type_rel repr TYPE('a)"
+    "type_rel typ (_:: ('a,'b) array  itself) ≡ ∃repr. typ = RPtr repr  ∧ type_rel repr TYPE('a)"
   instance ..
 end
+
