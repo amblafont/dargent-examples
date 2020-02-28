@@ -2,3 +2,6 @@ This example does not use layoutsm and yet fails
 
 
 CorresProof.thy fails with branch dargent-isa, but not with dargent
+
+see failure/example.th for the lemma which is solved in the dargent
+branch by some automatic tactic, but not in dargent-isa

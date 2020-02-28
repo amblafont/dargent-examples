@@ -1,0 +1,49 @@
+theory example
+(* put the [branch] you want below: dargent or dargentisa *)
+  imports "../Put_[branch]_CorresSetup"
+   "/home/amblaf/cogent/branches/[branch]/c-refinement/Corres_Tac"
+begin
+
+
+context update_sem_init begin
+
+(* some lemma solved by corres_put_boxed_tac in the dargent branch, but not in
+the dargentisa branch  *)
+lemma works_for_dargent_branch
+  : "[] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
+\<Gamma>' ! x = Some (TRecord typ (Boxed Writable ptrl)) \<Longrightarrow>
+type_rel (type_repr (TRecord typ (Boxed Writable ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
+val_rel (\<gamma> ! x) x' \<Longrightarrow>
+val_rel (\<gamma> ! v) v' \<Longrightarrow>
+\<Xi>', [], \<Gamma>' \<turnstile> Put (Var x) 0
+               (Var v) : TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), Present)]) (Boxed Writable ptrl) \<Longrightarrow>
+length typ = 2 \<Longrightarrow>
+corres state_rel (Put (Var x) 0 (Var v))
+ (do ptr <- gets (\<lambda>_. x');
+     _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+     _ <- modify (heap_t1_C_update (\<lambda>a. a(ptr := a_C_update (\<lambda>a. v') (a ptr))));
+     gets (\<lambda>_. ptr)
+  od)
+ \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
+
+(* this proof was obtained by reverse engineering  corres_put_boxed_tac.
+Indeed, in the dargent branch,
+ apply (tactic \<open> corres_put_boxed_tac @{context} 1 \<close>) solves the goal
+*)
+apply (simp only:val_rel_ptr_def gets_to_return return_bind)
+ apply(elim  exE) 
+  thm corres_put_boxed
+   apply (cut_tac corres_put_boxed)
+        apply (simp add:gets_to_return[THEN eq_reflection])
+       apply(simp)
+      apply(assumption)
+     (* here it fails on the dargentisa branch *)
+     apply(assumption)
+  apply(assumption) 
+      
+   apply simp
+  apply (clarsimp simp add: state_rel_def heap_rel_def val_rel_ptr_def type_rel_ptr_def  heap_rel_ptr_meta heap_t1_C_def is_valid_t1_C_def)
+  apply (rule u_t_p_recE)
+       apply assumption
+
+(* .. *)
