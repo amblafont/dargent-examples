@@ -5,7 +5,7 @@ branche can be master, dargent, dargentisa (my branch)
 
 -------------------------
 Currently, the branch dargentisa succeeds on a simple example with layout
-(identity) and fails on a simple example without layouts (put)
+(identity) and fails with a more complicated one (fields)
 
 
 --------------------------
