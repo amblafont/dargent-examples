@@ -1,0 +1,9 @@
+
+type Easy =
+  { aa : U32, bb : U32 }
+
+
+proj_aa : Easy! -> U32
+proj_aa easy = easy.aa
+
+

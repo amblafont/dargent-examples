@@ -1,0 +1,11 @@
+
+type Easy =
+  { aa : U32, bb : U32 }
+    layout 
+      record { aa : 4B at 0B, bb : 4B at 4B }
+
+
+proj_aa : Easy! -> U32
+proj_aa easy = easy.aa
+
+

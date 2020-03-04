@@ -5,7 +5,8 @@ branche can be master, dargent, dargentisa (my branch)
 
 -------------------------
 Currently, the branch dargentisa succeeds on a simple example with layout
-(identity) and fails with a more complicated one (fields)
+(identity) and fails with a slightly more complicated one (onefield, taking
+the projection of a singleton record)
 
 
 --------------------------
@@ -26,6 +27,9 @@ begin
     "type_rel typ (_:: ('a,'b) array  itself) ≡ ∃repr ptrl. typ = RPtr repr ptrl ∧ type_rel repr TYPE('a)"
   instance ..
 end
+
+you also need to add val_rel_array_def to val_rel_simps
+ and similarly for type_rel_array_def in type_rel_simps
 
 For branch dargent:
 
