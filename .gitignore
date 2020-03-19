@@ -1,8 +1,5 @@
-*.thy
 *#
 *~
-*.c
-*.h
-*.table
+build/
 BUILD_INFO
 ROOT
