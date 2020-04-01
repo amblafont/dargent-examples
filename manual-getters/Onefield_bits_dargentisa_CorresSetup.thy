@@ -30,6 +30,9 @@ definition val_rel_bool_t_C_def:
      uv = UPrim (LBool (boolean_C x \<noteq> 0))"
 instance ..
 end
+
+
+
 context update_sem_init begin
 lemmas corres_if = corres_if_base[where bool_val' = boolean_C,
                      OF _ _ val_rel_bool_t_C_def[THEN meta_eq_to_obj_eq, THEN iffD1]]
@@ -38,6 +41,53 @@ end
 class cogent_C_heap = cogent_C_val +
   fixes is_valid    :: "lifted_globals \<Rightarrow> 'a ptr \<Rightarrow> bool"
   fixes heap        :: "lifted_globals \<Rightarrow> 'a ptr \<Rightarrow> 'a"
+
+
+(* Non generated stuff *)
+
+(* was obtained from find_theorems name:d3_get_aa_part0.
+The deref prefix means that we don't take a pointer as an argument
+contrary to the C code.
+ *)
+definition deref_d3_get_aa_part0 :: "t1_C \<Rightarrow> 32 word"
+where "deref_d3_get_aa_part0 b = ((data_C b).[0] >> 1)  &&  0x7FFFFFFF"
+
+definition deref_d4_get_aa_part1 :: "t1_C \<Rightarrow> 32 word"
+where "deref_d4_get_aa_part1 b = (data_C b).[1]  && 1"
+
+definition deref_d2_get_aa :: "t1_C \<Rightarrow> 32 word" 
+  where "deref_d2_get_aa b = deref_d3_get_aa_part0 b || 
+  (deref_d4_get_aa_part1 b << 31)"
+
+(* no C counterpart (would be the counterpart of
+an unboxed record nested in a record layout: then the 
+compiler generate this) 
+*)
+abbreviation t1_C_aa_type 
+   where  "t1_C_aa_type \<equiv> RPrim (Num U32)"
+
+definition t1_C_to_uval :: "t1_C \<Rightarrow> (_,_,_) uval" where
+  "t1_C_to_uval b = URecord [(UPrim (LU32 (deref_d2_get_aa b)), t1_C_aa_type )]"
+
+instantiation t1_C :: cogent_C_val
+begin
+definition type_rel_t1_C_def: "\<And> typ. type_rel typ (_ :: t1_C itself) \<equiv> (typ = RRecord [t1_C_aa_type ])"
+definition val_rel_t1_C_def:
+    " val_rel uv (x :: t1_C) \<equiv> uv = t1_C_to_uval x "
+instance ..
+end
+
+instantiation t1_C ::  cogent_C_heap
+begin
+  definition is_valid_t1_C_def:
+    " is_valid \<equiv> is_valid_t1_C "
+  definition heap_t1_C_def:
+    "heap_rel = heap_t1_C"
+  instance ..
+end
+
+(* End of non generated stuff *)
+
 local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets "onefield_bits_dargentisa.c" \<close>
 local_setup \<open> local_setup_instantiate_cogent_C_heaps_store_them_in_buckets "onefield_bits_dargentisa.c" \<close>
 locale Onefield_bits_dargentisa = "onefield_bits_dargentisa" + update_sem_init
