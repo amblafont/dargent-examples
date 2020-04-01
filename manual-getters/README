@@ -1,0 +1,5 @@
+These are small examples where I manually generate the getters/setters and 
+their related properties. Then, I try to make the automatic proof work.
+This generation will be dealt with later, either from the Haskell side
+(Zilin could help me for this), or from the ML side.
+
