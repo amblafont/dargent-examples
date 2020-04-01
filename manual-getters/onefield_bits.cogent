@@ -1,0 +1,11 @@
+
+type Easy =
+  { aa : U32 }
+    layout 
+      record { aa : 32b at 1b }
+
+
+main : Easy! -> U32
+main easy = easy.aa
+
+
