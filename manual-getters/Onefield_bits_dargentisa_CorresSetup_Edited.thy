@@ -79,9 +79,9 @@ end
 
 instantiation t1_C ::  cogent_C_heap
 begin
-  definition is_valid_t1_C_def:
+  definition is_valid_t1_C_def[IsValidSimp]:
     " is_valid \<equiv> is_valid_t1_C "
-  definition heap_t1_C_def:
+  definition heap_t1_C_def[HeapSimp]:
     "heap_rel = heap_t1_C"
   instance ..
 end
