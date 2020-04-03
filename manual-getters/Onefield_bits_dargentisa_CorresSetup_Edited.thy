@@ -44,24 +44,23 @@ class cogent_C_heap = cogent_C_val +
 
 
 (* Non generated stuff *)
-
-named_theorems GetterSetterSimp
+named_theorems GetSetDefs
 (* was obtained from find_theorems name:get_aa_part0.
 The deref prefix means that we don't take a pointer as an argument
 contrary to the C code.
  *)
 find_theorems name:get_aa
 definition deref_d3_get_aa_part0 :: "t1_C \<Rightarrow> 32 word"
-  where deref_d3_get_aa_part0_def[GetterSetterSimp]  :
+  where deref_d3_get_aa_part0_def[GetSetDefs]  :
    "deref_d3_get_aa_part0 b = ((data_C b).[0] >> 1)  &&  0x7FFFFFFF"
 
 
 definition deref_d4_get_aa_part1 :: "t1_C \<Rightarrow> 32 word"
-  where  deref_d4_get_aa_part1_def[GetterSetterSimp]  :
+  where  deref_d4_get_aa_part1_def[GetSetDefs]  :
  "deref_d4_get_aa_part1 b = (data_C b).[1]  && 1"
 
 definition deref_d2_get_aa :: "t1_C \<Rightarrow> 32 word" 
-  where deref_d2_get_aa_def[GetterSetterSimp]  :
+  where deref_d2_get_aa_def[GetSetDefs]  :
   "deref_d2_get_aa b = deref_d3_get_aa_part0 b || 
   (deref_d4_get_aa_part1 b << 31)"
 
@@ -73,32 +72,41 @@ abbreviation t1_C_aa_type
    where  "t1_C_aa_type \<equiv> RPrim (Num U32)"
 
 definition t1_C_to_uval :: "t1_C \<Rightarrow> (_,_,_) uval" 
- where t1_C_to_uval_def[GetterSetterSimp]  :
+ where t1_C_to_uval_def[GetSetSimp]  :
   "t1_C_to_uval b = URecord [(UPrim (LU32 (deref_d2_get_aa b)), t1_C_aa_type )]"
 
 (* Now the setters *)
 find_theorems name:set_aa name:def
 
 definition deref_d6_set_aa_part0 :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
-  where deref_d6_set_aa_part0_def[GetterSetterSimp] : "deref_d6_set_aa_part0 b v =
+  where deref_d6_set_aa_part0_def[GetSetDefs] : "deref_d6_set_aa_part0 b v =
     data_C_update (\<lambda>a. Arrays.update a 0
                             (a.[0] && 1 ||  (v && 0x7FFFFFFF << Suc 0))) b"
 
 definition deref_d7_set_aa_part1 :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
-  where  deref_d7_set_aa_part1_def[GetterSetterSimp] :
+  where  deref_d7_set_aa_part1_def[GetSetDefs] :
   "deref_d7_set_aa_part1 b v =
     data_C_update (\<lambda>a. Arrays.update a (Suc 0)
                             (a.[Suc 0] && 0xFFFFFFFE ||
                              v && 1)) b"
 
+
+
 (* TODO: tell Zilin to remove this redundancy mask (&& 1 and && 0x7FFF..).
 Indeed, they are already performed in the parts
  *)
 definition deref_d5_set_aa :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
-   where  deref_d5_set_aa_def[GetterSetterSimp] : 
+   where  deref_d5_set_aa_def[GetSetDefs] : 
   "deref_d5_set_aa b v =
       deref_d7_set_aa_part1 (deref_d6_set_aa_part0 b (v && 0x7FFFFFFF)) 
       ((v >> 31) && 1)"
+
+
+(* get set *)
+
+lemma get_set_aa[GetSetSimp] : "deref_d2_get_aa (deref_d5_set_aa b v) = v"
+  sorry
+
 
 (* Typeclass instances *)
 instantiation t1_C :: cogent_C_val
@@ -214,7 +222,11 @@ corres state_rel (Put (Var x) 0 (Var v))
       ;
      gets (\<lambda>_. ptr)
   od)
- \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s " 
+ \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
+  apply(tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
+(*
+This is a decompilation of corres_put_boxed_tac
+
  apply (simp add:facts1)
   apply(elim exE)
   apply (cut_tac corres_put_boxed)
@@ -236,14 +248,11 @@ corres state_rel (Put (Var x) 0 (Var v))
   apply((frule all_heap_rel_updE, assumption) )  
   prefer 5
       apply (simp add:TypeRelSimp ValRelSimp)
-      (* GetterSetterSimp was necessary *)
-     apply (simp add:TypeRelSimp ValRelSimp GetterSetterSimp)
+     apply (simp add:TypeRelSimp ValRelSimp GetSetSimp )
     apply (simp add:TypeRelSimp ValRelSimp)
    apply (simp add:TypeRelSimp ValRelSimp )
-(* not solving *)
-  apply (simp add:TypeRelSimp ValRelSimp GetterSetterSimp)
-  apply clarify
-
+  apply (simp add:TypeRelSimp ValRelSimp GetSetSimp)
+*)
 
 (* End of non generated stuff *)
 
