@@ -45,18 +45,24 @@ class cogent_C_heap = cogent_C_val +
 
 (* Non generated stuff *)
 
-(* was obtained from find_theorems name:d3_get_aa_part0.
+named_theorems GetterSetterSimp
+(* was obtained from find_theorems name:get_aa_part0.
 The deref prefix means that we don't take a pointer as an argument
 contrary to the C code.
  *)
+find_theorems name:get_aa
 definition deref_d3_get_aa_part0 :: "t1_C \<Rightarrow> 32 word"
-where "deref_d3_get_aa_part0 b = ((data_C b).[0] >> 1)  &&  0x7FFFFFFF"
+  where deref_d3_get_aa_part0_def[GetterSetterSimp]  :
+   "deref_d3_get_aa_part0 b = ((data_C b).[0] >> 1)  &&  0x7FFFFFFF"
+
 
 definition deref_d4_get_aa_part1 :: "t1_C \<Rightarrow> 32 word"
-where "deref_d4_get_aa_part1 b = (data_C b).[1]  && 1"
+  where  deref_d4_get_aa_part1_def[GetterSetterSimp]  :
+ "deref_d4_get_aa_part1 b = (data_C b).[1]  && 1"
 
 definition deref_d2_get_aa :: "t1_C \<Rightarrow> 32 word" 
-  where "deref_d2_get_aa b = deref_d3_get_aa_part0 b || 
+  where deref_d2_get_aa_def[GetterSetterSimp]  :
+  "deref_d2_get_aa b = deref_d3_get_aa_part0 b || 
   (deref_d4_get_aa_part1 b << 31)"
 
 (* no C counterpart (would be the counterpart of
@@ -66,9 +72,35 @@ compiler generate this)
 abbreviation t1_C_aa_type 
    where  "t1_C_aa_type \<equiv> RPrim (Num U32)"
 
-definition t1_C_to_uval :: "t1_C \<Rightarrow> (_,_,_) uval" where
+definition t1_C_to_uval :: "t1_C \<Rightarrow> (_,_,_) uval" 
+ where t1_C_to_uval_def[GetterSetterSimp]  :
   "t1_C_to_uval b = URecord [(UPrim (LU32 (deref_d2_get_aa b)), t1_C_aa_type )]"
 
+(* Now the setters *)
+find_theorems name:set_aa name:def
+
+definition deref_d6_set_aa_part0 :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
+  where deref_d6_set_aa_part0_def[GetterSetterSimp] : "deref_d6_set_aa_part0 b v =
+    data_C_update (\<lambda>a. Arrays.update a 0
+                            (a.[0] && 1 ||  (v && 0x7FFFFFFF << Suc 0))) b"
+
+definition deref_d7_set_aa_part1 :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
+  where  deref_d7_set_aa_part1_def[GetterSetterSimp] :
+  "deref_d7_set_aa_part1 b v =
+    data_C_update (\<lambda>a. Arrays.update a (Suc 0)
+                            (a.[Suc 0] && 0xFFFFFFFE ||
+                             v && 1)) b"
+
+(* TODO: tell Zilin to remove this redundancy mask (&& 1 and && 0x7FFF..).
+Indeed, they are already performed in the parts
+ *)
+definition deref_d5_set_aa :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
+   where  deref_d5_set_aa_def[GetterSetterSimp] : 
+  "deref_d5_set_aa b v =
+      deref_d7_set_aa_part1 (deref_d6_set_aa_part0 b (v && 0x7FFFFFFF)) 
+      ((v >> 31) && 1)"
+
+(* Typeclass instances *)
 instantiation t1_C :: cogent_C_val
 begin
 definition type_rel_t1_C_def[TypeRelSimp]: "\<And> typ. type_rel typ (_ :: t1_C itself) \<equiv> (typ = RRecord [t1_C_aa_type ])"
@@ -82,7 +114,7 @@ begin
   definition is_valid_t1_C_def[IsValidSimp]:
     " is_valid \<equiv> is_valid_t1_C "
   definition heap_t1_C_def[HeapSimp]:
-    "heap_rel = heap_t1_C"
+    "heap = heap_t1_C"
   instance ..
 end
 
@@ -130,6 +162,90 @@ lemmas type_rel_simps[TypeRelSimp] =
   type_rel_unit_def
   type_rel_unit_t_C_def
   type_rel_bool_t_C_def
+
+(* Non generated stuff *)
+
+(* Now, we need to generate the lemmas
+
+Adapted from the following code, in the generated CorresSetup
+file with typeclass instances for arrays
+ *)
+
+ML \<open>mk_lems "onefield_bits_dargentisa.c" @{context} |> 
+  List.map (fn l => ( ( ("lemma " ^
+(# name l) ^ "[" ^ bucket_to_string (# bucket l) ^ "] :\n\"" ^ ( (# prop l) |>
+  (Syntax.string_of_term @{context}) ))
+   |> writeln ); writeln "\"\n\n"))
+ \<close>
+
+
+
+(* Contrary to the generated lemma, v' is of type U32 rather than
+array 
+also, the original line was
+ modify  (heap_t1_C_update (\<lambda>a. a(ptr := data_C_update (\<lambda>a. v') (a ptr))))
+
+should be solved by
+apply(tactic \<open>corres_put_boxed_tac @{context} 1\<close>
+*)
+
+lemmas facts1 = val_rel_ptr_def gets_to_return return_bind
+lemmas facts2 = state_rel_def heap_rel_def val_rel_ptr_def type_rel_ptr_def heap_rel_ptr_meta
+lemmas facts3 = facts2 IsValidSimp HeapSimp
+
+lemma corres_put_t1_C_aa_writable[PutBoxed] :
+"[] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
+\<Gamma>' ! x = Some (TRecord typ (Boxed Writable ptrl)) \<Longrightarrow>
+type_rel (type_repr (TRecord typ (Boxed Writable ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
+val_rel (\<gamma> ! x) x' \<Longrightarrow>
+val_rel (\<gamma> ! v) (v' :: 32 word) \<Longrightarrow>
+\<Xi>', [], \<Gamma>' \<turnstile> Put (Var x) 0
+               (Var v) : TRecord
+                          (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)),
+                                     Present)])
+                          (Boxed Writable ptrl) \<Longrightarrow> 
+
+length typ = 1 \<Longrightarrow>
+corres state_rel (Put (Var x) 0 (Var v))
+ (do ptr <- gets (\<lambda>_. x');
+     _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+     _ <-
+     modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d5_set_aa (a ptr) v' )))
+      ;
+     gets (\<lambda>_. ptr)
+  od)
+ \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s " 
+ apply (simp add:facts1)
+  apply(elim exE)
+  apply (cut_tac corres_put_boxed)
+        apply (simp add:gets_to_return[THEN eq_reflection])
+       apply(simp)
+      apply(assumption)
+     apply(assumption) 
+    apply assumption
+   apply assumption
+  apply (clarsimp simp add:facts3)
+  thm HeapSimp
+  apply (erule u_t_p_recE)
+   apply(clarsimp dest!:type_repr_uval_repr simp add:TypeRelSimp)
+  apply(clarsimp dest!:type_repr_uval_repr simp add:TypeRelSimp)
+
+  apply(frule all_heap_rel_ptrD)
+    apply assumption  
+   apply(clarsimp  simp add:TypeRelSimp)
+  apply((frule all_heap_rel_updE, assumption) )  
+  prefer 5
+      apply (simp add:TypeRelSimp ValRelSimp)
+      (* GetterSetterSimp was necessary *)
+     apply (simp add:TypeRelSimp ValRelSimp GetterSetterSimp)
+    apply (simp add:TypeRelSimp ValRelSimp)
+   apply (simp add:TypeRelSimp ValRelSimp )
+(* not solving *)
+  apply (simp add:TypeRelSimp ValRelSimp GetterSetterSimp)
+  apply clarify
+
+
+(* End of non generated stuff *)
 
 (* Generating the specialised take and put lemmas *)
 

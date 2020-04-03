@@ -5,7 +5,7 @@ type Easy =
       record { aa : 32b at 1b }
 
 
-main : Easy! -> U32
-main easy = easy.aa
+main : Easy -> Easy
+main (r { aa }) = r { aa = aa + 1 }
 
 
