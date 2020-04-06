@@ -356,7 +356,7 @@ lemma corres_let_put_t1_C_aa_writable[LetPutBoxed] :
 (* Generating the specialised take and put lemmas *)
 
 (* Non-generated stuff: supplementary argument: list of ignored types *)
-local_setup \<open> local_setup_take_put_member_case_esac_specialised_lemmas "onefield_bits_dargentisa.c"
+local_setup \<open> local_setup_take_put_member_case_esac_specialised_lemmas_ignore_types "onefield_bits_dargentisa.c"
     ["t1_C"] \<close>
 local_setup \<open> fold tidy_C_fun_def' Cogent_functions \<close>
 
