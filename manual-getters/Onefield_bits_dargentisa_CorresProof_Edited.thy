@@ -34,7 +34,7 @@ maps (fn t => case Thm.prop_of t of
  (* XXX: dodgy hack: x_fresh_cogent and uv_fresh_cogent should both be fresh names and must be bound in the definition below.
     This will fail if there is a function called x_fresh_cogent. *) 
        then [@{mk_term "x_fresh_cogent = sint (?tag :: 32 signed word) \<and> uv_fresh_cogent = UFunction (?fun :: string expr) []"
-               (tag, fun)} (tag_term, Syntax.read_term @{context} ("Onefield_bits_dargentisa_TypeProof." ^ fun_name))]
+               (tag, fun)} (tag_term, Syntax.read_term @{context} ("Onefield_bits_dargentisa_TypeProof_Edited." ^ fun_name))]
        else [@{mk_term "x_fresh_cogent = sint (?tag :: 32 signed word) \<and> uv_fresh_cogent = UAFunction (?fun :: string) []"
                (tag, fun)} (tag_term, HOLogic.mk_string fun_name)]
     end
@@ -132,7 +132,7 @@ fun mapBoth f = mapEither f f
 (* Entry point for verification *)
 val Cogent_main_tree =
   make_call_tree (Cogent_functions, Cogent_abstract_functions)
-    (Symtab.map (K (map (apsnd (map (apsnd (mapBoth (maybe_unprefix "Onefield_bits_dargentisa_TypeProof."))))))) HO_call_hints) @{context}
+    (Symtab.map (K (map (apsnd (map (apsnd (mapBoth (maybe_unprefix "Onefield_bits_dargentisa_TypeProof_Edited."))))))) HO_call_hints) @{context}
   |> Symtab.map (K annotate_depth)
 
 val entry_func_names = [
