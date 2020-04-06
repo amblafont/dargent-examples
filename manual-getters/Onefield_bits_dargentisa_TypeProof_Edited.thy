@@ -24,7 +24,7 @@ where
 definition
   main :: "string Cogent.expr"
 where
-  "main \<equiv> Take (Var 0) 0 (Let (Prim (Plus U32) [Var 0, Lit (LU32 1)]) (Put (Var 2) 0 (Var 0)))"
+  "main \<equiv> Take (Var 0) 0 (Let (Lit (LU32 1)) (Let (Prim (Plus U32) [Var 1, Var 0]) (Put (Var 3) 0 (Var 0))))"
 
 ML \<open>
 val Cogent_functions = ["main"]
@@ -40,7 +40,7 @@ definition
   "\<xi> \<equiv> assoc_lookup []"
 
 definition
-  "main_typetree \<equiv> TyTrSplit (Cons (Some TSK_L) []) [] TyTrLeaf [Some (TPrim (Num U32)), Some (TRecord [(''aa'', (TPrim (Num U32), Taken))] (Boxed Writable undefined))] (TyTrSplit (Cons (Some TSK_L) (Cons (Some TSK_R) (Cons None []))) [] TyTrLeaf [Some (TPrim (Num U32))] TyTrLeaf)"
+  "main_typetree \<equiv> TyTrSplit (Cons (Some TSK_L) []) [] TyTrLeaf [Some (TPrim (Num U32)), Some (TRecord [(''aa'', (TPrim (Num U32), Taken))] (Boxed Writable undefined))] (TyTrSplit (Cons (Some TSK_R) (Cons (Some TSK_R) (Cons None []))) [] TyTrLeaf [Some (TPrim (Num U32))] (TyTrSplit (Cons (Some TSK_L) (Cons (Some TSK_L) (Cons (Some TSK_R) (Cons None [])))) [] TyTrLeaf [Some (TPrim (Num U32))] TyTrLeaf))"
 
 ML \<open> open TTyping_Tactics \<close>
 
@@ -119,8 +119,14 @@ StepDown,
 StepDown,
 Val (KindingTacs [(RTac @{thm typing_helper_2})]),
 StepUp,
-Val (TypingTacs [(RTac @{thm typing_prim'}),(SimpSolveTac ([],[])),(SimpSolveTac ([],[])),(RTac @{thm typing_all_cons}),(SplitsTac [SOME [(RTac @{thm split_comp.left}),(RTac @{thm type_wellformed_prettyI}),(SimpTac ([],@{thms type_wellformed.simps})),(RTac @{thm typing_helper_4})],NONE]),(RTac @{thm typing_var}),(SimpTac ([@{thm empty_def}],[])),(WeakeningTac [@{thm typing_helper_2}]),(SimpSolveTac ([],[])),(RTac @{thm typing_all_cons}),(SplitsTac [NONE]),(RTac @{thm typing_lit'}),(SimpTac ([@{thm empty_def}],[])),(WeakeningTac []),(SimpSolveTac ([],[])),(RTac @{thm typing_all_empty'[where n = "3"]}),(SimpTac ([@{thm empty_def}],[]))]),
+Val (TypingTacs [(RTac @{thm typing_lit'}),(SimpTac ([@{thm empty_def}],[])),(WeakeningTac []),(SimpSolveTac ([],[]))]),
+StepDown,
+StepDown,
+Val (KindingTacs [(RTac @{thm typing_helper_2})]),
+StepUp,
+Val (TypingTacs []),
 Val (TypingTacs [(RTac @{thm typing_put'}),(SplitsTac [SOME [(RTac @{thm split_comp.right}),(RTac @{thm type_wellformed_prettyI}),(SimpTac ([],@{thms type_wellformed.simps})),(RTac @{thm typing_helper_4})],NONE,SOME [(RTac @{thm split_comp.left}),(RTac @{thm type_wellformed_prettyI}),(SimpTac ([],@{thms type_wellformed.simps})),(RTac @{thm typing_helper_5})],NONE]),(RTac @{thm typing_var}),(SimpTac ([@{thm empty_def}],[])),(WeakeningTac [@{thm typing_helper_3}]),(SimpSolveTac ([],[])),(SimpSolveTac ([],[])),(SimpSolveTac ([],[])),(SimpSolveTac ([],[@{thm Product_Type.prod.inject}])),(RTac @{thm typing_helper_2}),(SimpSolveTac ([],[])),(RTac @{thm typing_var}),(SimpTac ([@{thm empty_def}],[])),(WeakeningTac [@{thm typing_helper_2}]),(SimpSolveTac ([],[])),(SimpSolveTac ([],[]))]),
+StepUp,
 StepUp,
 StepUp,
 StepUp
