@@ -223,7 +223,7 @@ corres state_rel (Put (Var x) 0 (Var v))
      gets (\<lambda>_. ptr)
   od)
  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
-  apply(tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
+  by  (tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
 (*
 This is a decompilation of corres_put_boxed_tac
 
@@ -253,6 +253,103 @@ This is a decompilation of corres_put_boxed_tac
    apply (simp add:TypeRelSimp ValRelSimp )
   apply (simp add:TypeRelSimp ValRelSimp GetSetSimp)
 *)
+(* 
+ type_rel (type_repr (fst (snd (typ ! 0)))) TYPE(32 word[2]) \<Longrightarrow>
+*)
+lemma corres_take_t1_C_aa_writable[TakeBoxed] :
+"\<Gamma>' ! x = Some (TRecord typ (Boxed Writable undefined)) \<Longrightarrow>
+ [] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
+ val_rel (\<gamma> ! x) x' \<Longrightarrow>
+ type_rel (type_repr (TRecord typ (Boxed Writable undefined))) TYPE(t1_C ptr) \<Longrightarrow>
+ type_rel (type_repr (fst (snd (typ ! 0)))) TYPE(32 word) \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> Take (Var x) 0 e : te \<Longrightarrow>
+ \<Xi>', [], \<Gamma>x \<turnstile> Var x : TRecord typ (Boxed Writable undefined) \<Longrightarrow>
+ \<Xi>', [], Some (fst (snd (typ ! 0))) #
+          Some (TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), taken)]) (Boxed Writable undefined)) #
+          \<Gamma>e \<turnstile> e : te \<Longrightarrow>
+ [] \<turnstile> fst (snd (typ ! 0)) :\<kappa> k \<Longrightarrow>
+ S \<in> k \<or> taken = Taken \<Longrightarrow>
+ (\<And>vf z.
+     val_rel vf z \<Longrightarrow>
+     corres state_rel e (e' z) \<xi>' (vf # \<gamma> ! x # \<gamma>) \<Xi>'
+      (Some (fst (snd (typ ! 0))) #
+       Some (TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), taken)]) (Boxed Writable undefined)) # \<Gamma>e)
+      \<sigma> s) \<Longrightarrow>
+ corres state_rel (Take (Var x) 0 e) (do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x')) >>= e'
+                                      od)
+  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
+"
+  by(tactic \<open>corres_take_boxed_tac @{context} 1\<close>)
+(*
+ apply(simp add:val_rel_ptr_def)
+  apply (elim exE)
+  apply (rule corres_take_boxed)
+             apply simp
+            apply simp
+           apply simp
+          apply simp
+         apply (simp add:facts3)
+        apply simp
+       apply simp
+      apply simp
+     apply simp
+    apply simp
+   apply (simp add:facts3)
+
+   apply (erule u_t_p_recE)
+    apply(clarsimp dest!:type_repr_uval_repr simp add:TypeRelSimp)
+
+   apply(clarsimp dest!:type_repr_uval_repr simp add:TypeRelSimp)
+   apply(frule all_heap_rel_ptrD)
+     apply assumption
+    apply (clarsimp simp add:TypeRelSimp ValRelSimp)
+   apply (clarsimp simp add:TypeRelSimp ValRelSimp GetSetSimp)
+  apply (clarsimp simp add:TypeRelSimp ValRelSimp)
+*)
+  
+
+lemma corres_member_t1_C_aa_writable[MemberReadOnly] :
+"\<Gamma>' ! x = Some (TRecord typ (Boxed ReadOnly ptrl)) \<Longrightarrow>
+ val_rel (\<gamma> ! x) x' \<Longrightarrow>
+ type_rel (type_repr (TRecord typ (Boxed ReadOnly ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
+ type_rel (type_repr (fst (snd (typ ! 0)))) TYPE(32 word) \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> Member (Var x) 0 : te \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> Var x : TRecord typ (Boxed ReadOnly ptrl) \<Longrightarrow>
+ corres state_rel (Member (Var x) 0) (do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x'))
+                                      od)
+  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
+"
+  by(tactic \<open>corres_take_boxed_tac @{context} 1\<close>)
+
+
+lemma corres_let_put_t1_C_aa_writable[LetPutBoxed] :
+"[] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
+ \<Gamma>' ! x = Some (TRecord typ (Boxed Writable ptrl)) \<Longrightarrow>
+ type_rel (type_repr (TRecord typ (Boxed Writable ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
+ val_rel (\<gamma> ! x) x' \<Longrightarrow>
+ val_rel (\<gamma> ! v) v' \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> expr.Let (Put (Var x) 0 (Var v)) e : ts \<Longrightarrow>
+ \<Xi>', [], \<Gamma>x \<turnstile> Put (Var x) 0
+                (Var v) : TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), Present)])
+                           (Boxed Writable ptrl) \<Longrightarrow>
+ length typ = 1 \<Longrightarrow>
+ (\<And>\<sigma> s. corres state_rel e (e' x') \<xi>' (\<gamma> ! x # \<gamma>) \<Xi>'
+          (Some (TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), Present)]) (Boxed Writable ptrl)) # \<Gamma>e) \<sigma>
+          s) \<Longrightarrow>
+ corres state_rel (expr.Let (Put (Var x) 0 (Var v)) e)
+  (do ptr <- gets (\<lambda>_. x');
+      _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+      _ <- modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d5_set_aa (a ptr) v')));
+      gets (\<lambda>_. ptr) >>= e'
+   od)
+  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
+"
+  by (tactic \<open>corres_let_put_boxed_tac @{context} 1\<close>)
+
+
+(* Now we have all proven the lemmas that mk_lems should generate *)
 
 (* End of non generated stuff *)
 
