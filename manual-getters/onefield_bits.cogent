@@ -6,6 +6,6 @@ type Easy =
 
 
 main : Easy -> Easy
-main (r { aa }) = r { aa = aa + 1 }
+main (r { aa }) = r { aa = aa + aa }
 
 

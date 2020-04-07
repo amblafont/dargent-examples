@@ -10,7 +10,7 @@ imports "/home/laf027/cogent/branches/dargentisa/c-refinement/Deep_Embedding_Aut
 "/home/laf027/cogent/branches/dargentisa/c-refinement/Heap_Relation_Generation"
 "/home/laf027/cogent/branches/dargentisa/c-refinement/Type_Relation_Generation"
 "build_onefield_bits/Onefield_bits_dargentisa_ACInstall"
-"Onefield_bits_dargentisa_TypeProof_Edited"
+"build_onefield_bits/Onefield_bits_dargentisa_TypeProof"
 begin
 
 (* C type and value relations *)
