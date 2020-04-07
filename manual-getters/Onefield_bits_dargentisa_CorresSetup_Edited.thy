@@ -351,6 +351,58 @@ lemma corres_let_put_t1_C_aa_writable[LetPutBoxed] :
 
 (* Now we have all proven the lemmas that mk_lems should generate *)
 
+(* But, in the proof of correspondence, it seems that we rather need the following 
+   corres_take_t1_C_aa_writable' *)
+(*  (do v <- d2_get_aa' a'; *)
+
+(* generate tidy definition *)
+local_setup \<open>tidy_C_fun_def' "d2_get_aa"   \<close>
+local_setup \<open>tidy_C_fun_def' "d3_get_aa_part0"   \<close>
+local_setup \<open>tidy_C_fun_def' "d4_get_aa_part1"   \<close>
+thm d2_get_aa'_def' d3_get_aa_part0'_def' d4_get_aa_part1'_def'
+
+
+lemma d2_get_aa'_eq : "d2_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x')) 
+                                      od"
+  apply (simp add:GetSetSimp d2_get_aa'_def' GetSetDefs d3_get_aa_part0'_def' d4_get_aa_part1'_def')
+  apply (simp add:NonDetMonad.bind_assoc)
+  apply (simp add:NonDetMonadVCG.exec_gets)
+  apply (simp add:NonDetMonad.bind_def)
+  sorry
+
+lemma "(do v <- d2_get_aa' x' ; e v od) =  (do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x')) >>= e
+                                      od)"
+  by (simp add:d2_get_aa'_eq NonDetMonad.bind_assoc)
+
+lemma corres_take_t1_C_aa_writable'[TakeBoxed] :
+"\<Gamma>' ! x = Some (TRecord typ (Boxed Writable undefined)) \<Longrightarrow>
+ [] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
+ val_rel (\<gamma> ! x) x' \<Longrightarrow>
+ type_rel (type_repr (TRecord typ (Boxed Writable undefined))) TYPE(t1_C ptr) \<Longrightarrow>
+ type_rel (type_repr (fst (snd (typ ! 0)))) TYPE(32 word) \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> Take (Var x) 0 e : te \<Longrightarrow>
+ \<Xi>', [], \<Gamma>x \<turnstile> Var x : TRecord typ (Boxed Writable undefined) \<Longrightarrow>
+ \<Xi>', [], Some (fst (snd (typ ! 0))) #
+          Some (TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), taken)]) (Boxed Writable undefined)) #
+          \<Gamma>e \<turnstile> e : te \<Longrightarrow>
+ [] \<turnstile> fst (snd (typ ! 0)) :\<kappa> k \<Longrightarrow>
+ S \<in> k \<or> taken = Taken \<Longrightarrow>
+ (\<And>vf z.
+     val_rel vf z \<Longrightarrow>
+     corres state_rel e (e' z) \<xi>' (vf # \<gamma> ! x # \<gamma>) \<Xi>'
+      (Some (fst (snd (typ ! 0))) #
+       Some (TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), taken)]) (Boxed Writable undefined)) # \<Gamma>e)
+      \<sigma> s) \<Longrightarrow>
+ corres state_rel (Take (Var x) 0 e) (do v <- d2_get_aa' x' ;
+                                          e' v
+                                      od)
+  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
+"
+  sorry
+
+
 (* End of non generated stuff *)
 
 (* Generating the specialised take and put lemmas *)
