@@ -183,25 +183,6 @@ fun all_corres_goals corres_tac typing_tree_of time_limit ctxt (tab : obligation
 \<close>
 *)
 
-(* Non-generated *)
-
-(* trying to reproduce what tac_driver is doing *)
-lemmas funDefs = main_def main'_def' main_type_def fst_conv snd_conv abbreviated_type_defs
-
-
-
-lemma main_corres_0 : "\<And>a a' \<sigma> s. val_rel a a' \<Longrightarrow> corres state_rel main (main' a') \<xi>_0 [a] \<Xi> [Some (fst (snd main_type))] \<sigma> s"
-(*
- apply(tactic \<open>corres_tac_local true @{context} (peel_two (typing_tree_of "main")) @{thms funDefs}
-      [] []\<close>)
-*)
-apply(tactic \<open>corres_tac_local true @{context} (peel_two (typing_tree_of "main")) @{thms funDefs}
-      [] []\<close>)
-  apply (simp add:funDefs)
-  
-  oops
-
-(* End of non-generated *)
 
 ML \<open> val thm_tab = all_corres_goals (corres_tac_local true) typing_tree_of 99999 @{context} prop_tab \<close>
 (* Resolve function calls recursively *)

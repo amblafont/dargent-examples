@@ -5,3 +5,8 @@ This generation will be dealt with later, either from the Haskell side
 
 Pb: onefield_no_layout Corres Proof fails with the dargentbranch (commit 08e5ff0915afca0e83b8aa702314e7aacd)
 it is not in A normal form
+
+01/05 onefield_bits works with the dargentisa branch
+
+TODO: try nested records, and nested with # inside.
+try with variants

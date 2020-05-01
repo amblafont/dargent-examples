@@ -201,7 +201,14 @@ lemmas facts1 = val_rel_ptr_def gets_to_return return_bind
 lemmas facts2 = state_rel_def heap_rel_def val_rel_ptr_def type_rel_ptr_def heap_rel_ptr_meta
 lemmas facts3 = facts2 IsValidSimp HeapSimp
 
-lemma corres_put_t1_C_aa_writable[PutBoxed] :
+(* below, the statements of the non prime lemmas was adapted from the original
+generated lemmas and are proved automatically. Unfortunately, the prime lemmas
+are the one that are used in corres_tac. I suggest writing a special tactic
+for them which call the old ones for solving these goals. 
+*) 
+
+(* Not the right lemma (see writable' *)
+lemma corres_put_t1_C_aa_writable :
 "[] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
 \<Gamma>' ! x = Some (TRecord typ (Boxed Writable ptrl)) \<Longrightarrow>
 type_rel (type_repr (TRecord typ (Boxed Writable ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
@@ -256,7 +263,8 @@ This is a decompilation of corres_put_boxed_tac
 (* 
  type_rel (type_repr (fst (snd (typ ! 0)))) TYPE(32 word[2]) \<Longrightarrow>
 *)
-lemma corres_take_t1_C_aa_writable[TakeBoxed] :
+(* Not the right lemma *)
+lemma corres_take_t1_C_aa_writable :
 "\<Gamma>' ! x = Some (TRecord typ (Boxed Writable undefined)) \<Longrightarrow>
  [] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
  val_rel (\<gamma> ! x) x' \<Longrightarrow>
@@ -355,27 +363,17 @@ lemma corres_let_put_t1_C_aa_writable[LetPutBoxed] :
    corres_take_t1_C_aa_writable' *)
 (*  (do v <- d2_get_aa' a'; *)
 
-(* generate tidy definition *)
-local_setup \<open>tidy_C_fun_def' "d2_get_aa"   \<close>
-local_setup \<open>tidy_C_fun_def' "d3_get_aa_part0"   \<close>
-local_setup \<open>tidy_C_fun_def' "d4_get_aa_part1"   \<close>
-thm d2_get_aa'_def' d3_get_aa_part0'_def' d4_get_aa_part1'_def'
 
 
 lemma d2_get_aa'_eq : "d2_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
                                          gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x')) 
                                       od"
-  apply (simp add:GetSetSimp d2_get_aa'_def' GetSetDefs d3_get_aa_part0'_def' d4_get_aa_part1'_def')
-  apply (simp add:NonDetMonad.bind_assoc)
-  apply (simp add:NonDetMonadVCG.exec_gets)
-  apply (simp add:NonDetMonad.bind_def)
-  sorry
+  apply (simp add:GetSetSimp d2_get_aa'_def GetSetDefs d3_get_aa_part0'_def d4_get_aa_part1'_def)
+  apply(monad_eq)
+  done
+  
 
-lemma "(do v <- d2_get_aa' x' ; e v od) =  (do _ <- guard (\<lambda>s. is_valid_t1_C s x');
-                                         gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x')) >>= e
-                                      od)"
-  by (simp add:d2_get_aa'_eq NonDetMonad.bind_assoc)
-
+(* This one is useful, not the previous *)
 lemma corres_take_t1_C_aa_writable'[TakeBoxed] :
 "\<Gamma>' ! x = Some (TRecord typ (Boxed Writable undefined)) \<Longrightarrow>
  [] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
@@ -396,11 +394,58 @@ lemma corres_take_t1_C_aa_writable'[TakeBoxed] :
        Some (TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), taken)]) (Boxed Writable undefined)) # \<Gamma>e)
       \<sigma> s) \<Longrightarrow>
  corres state_rel (Take (Var x) 0 e) (do v <- d2_get_aa' x' ;
-                                          e' v
+                                        z <- gets (\<lambda>_. v) ;
+                                          e' z
                                       od)
   \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
 "
-  sorry
+(* 01/05 I found a solution by adding a redundant  z <- gets (\<lambda>_. v) ; 
+This is because when the C code calls another function, AutoCorres always generate
+such a useless gets. 
+*)
+  apply simp
+  apply (simp add: d2_get_aa'_eq)
+  apply (simp add:bind_assoc)
+  apply (simp add:corres_take_t1_C_aa_writable)
+  done
+
+
+lemma d5_set_aa'_eq :
+"d5_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d5_set_aa (a ptr) v))) od )
+"                                     
+  apply (simp add:GetSetSimp d5_set_aa'_def GetSetDefs d6_set_aa_part0'_def d7_set_aa_part1'_def)
+  apply monad_eq
+  done
+  
+
+(* This lemma was guessed from the corres_tac missing part*)
+lemma corres_put_t1_C_aa_writable'[PutBoxed] :
+"[] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
+\<Gamma>' ! x = Some (TRecord typ (Boxed Writable ptrl)) \<Longrightarrow>
+type_rel (type_repr (TRecord typ (Boxed Writable ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
+val_rel (\<gamma> ! x) x' \<Longrightarrow>
+val_rel (\<gamma> ! v) (v' :: 32 word) \<Longrightarrow>
+\<Xi>', [], \<Gamma>' \<turnstile> Put (Var x) 0
+               (Var v) : TRecord
+                          (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)),
+                                     Present)])
+                          (Boxed Writable ptrl) \<Longrightarrow> 
+
+length typ = 1 \<Longrightarrow>
+corres state_rel (Put (Var x) 0 (Var v))
+ (do ptr <- gets (\<lambda>_. x');
+     _ <- d5_set_aa' ptr v'
+      ;
+     _ <- gets (\<lambda>_. ());
+     gets (\<lambda>_. ptr)
+  od)
+ \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
+  apply( simp add:d5_set_aa'_eq bind_assoc)
+  apply (simp add:corres_put_t1_C_aa_writable[simplified])
+  done
+  
+
 
 
 (* End of non generated stuff *)
