@@ -1,0 +1,10 @@
+type Easy =
+  { aa : #{bb : U32, cc : U8} }
+    layout 
+      record { aa : record { bb : 4B at 0B , cc : 1B at 6B} at 1B }  at 1B
+
+
+main : Easy! -> U8
+main easy = easy.aa.cc
+
+
