@@ -11,7 +11,6 @@ imports "/home/laf027/cogent/branches/dargentisa/c-refinement/Deep_Embedding_Aut
 "/home/laf027/cogent/branches/dargentisa/c-refinement/Type_Relation_Generation"
 "build_onefield_bits/Onefield_bits_dargentisa_ACInstall"
 "build_onefield_bits/Onefield_bits_dargentisa_TypeProof"
-"../Masks"
 begin
 
 (* C type and value relations *)
@@ -110,18 +109,7 @@ lemma
   "(b0 && 1 || (v && 0x7FFFFFFF << Suc 0) >> Suc 0) && 0x7FFFFFFF ||
    ((b1 && 0xFFFFFFFE || (v >> 31) && 1) && 1 << 31) =
     v"
-
-  apply (simp add:
-      shiftl_over_and_dist shiftr_over_or_dist
-      mask_31 not_mask_31
-      mask_1 not_mask_1
-      lshift1_mask31_eq_not_mask1
-      mask_shift and_mask2
-      word_bits_conv word_bits_size
-      word_bool_alg.conj_disj_distrib2
-      word_bool_alg.disj.assoc
-      word_bool_alg.conj.assoc)
-  apply (simp add: shiftr_over_and_dist mask_shiftl_decompose and_not_mask[symmetric] mask_or_not_mask)
+  apply(word_bitwise)
   done
 
 
