@@ -1,10 +1,11 @@
 type Easy =
   { aa : #{bb : U32, cc : U8} }
     layout 
-      record { aa : record { bb : 4B at 0B , cc : 1B at 6B} at 1B }  at 1B
+     record { aa : record { bb : 4B at 0B , cc : 1B at 6B} at 1B }  at 1B
 
 
-main : Easy! -> U8
-main easy = easy.aa.cc
 
-
+main : Easy -> Easy
+main easy = let x = easy.aa.bb !easy
+            and y = easy.aa.cc !easy
+             in easy { aa = #{ bb = x + upcast y , cc = y } }

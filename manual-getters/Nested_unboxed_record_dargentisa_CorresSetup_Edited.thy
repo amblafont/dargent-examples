@@ -38,6 +38,41 @@ end
 class cogent_C_heap = cogent_C_val +
   fixes is_valid    :: "lifted_globals \<Rightarrow> 'a ptr \<Rightarrow> bool"
   fixes heap        :: "lifted_globals \<Rightarrow> 'a ptr \<Rightarrow> 'a"
+
+
+(* Non-generated stuff *)
+
+(* was obtained by the local_setup and anonymous context 
+later in this file *)
+definition deref_d3_get_aa :: "t1_C \<Rightarrow> t2_C"  
+  where deref_d3_get_aa_def : 
+   "deref_d3_get_aa a =
+   (t2_C
+   ((data_C a.[0] >> 16) && 0xFFFF ||
+    (data_C a.[Suc 0] && 0xFFFF << 16))
+   (UCAST(32 \<rightarrow> 8) (data_C a.[2] && 0xFF)))"
+
+
+
+(* For the type/value relation *)
+
+
+(* We need the typeclass instances cogent_C_val for t2 *)
+local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets_for_types "nested_unboxed_record_dargentisa.c" ["t2_C"]\<close>
+(* obtained from the version without layout *)
+instantiation t1_C :: cogent_C_val
+begin
+definition type_rel_t1_C_def[TypeRelSimp]: "\<And> typ. type_rel typ (_ :: t1_C itself) \<equiv> 
+   (\<exists>aa. typ = RRecord [aa] \<and> type_rel aa TYPE(t2_C))"
+definition val_rel_t1_C_def[ValRelSimp]:
+    " val_rel uv (x :: t1_C) \<equiv> \<exists>aa. uv = URecord [aa] \<and> val_rel (fst aa) (deref_d3_get_aa x)"
+instance ..
+end
+
+
+
+(* End of non-generated stuff *)
+
 local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets "nested_unboxed_record_dargentisa.c" \<close>
 local_setup \<open> local_setup_instantiate_cogent_C_heaps_store_them_in_buckets "nested_unboxed_record_dargentisa.c" \<close>
 locale Nested_unboxed_record_dargentisa = "nested_unboxed_record_dargentisa" + update_sem_init
@@ -81,9 +116,227 @@ lemmas type_rel_simps[TypeRelSimp] =
   type_rel_unit_t_C_def
   type_rel_bool_t_C_def
 
+(* 
+
+Non-generated stuff
+
+*)
+
+
+
+context  
+  fixes s0  :: "lifted_globals"  
+begin
+lemma s0_eq : "\<And> (e :: lifted_globals \<Rightarrow> 'a). gets e = return (e s0)"
+  sorry
+
+lemma false_aux : 
+ "\<And> e. guard e = gets (\<lambda>_ . ())"
+  apply simp
+  sorry
+
+(* used to devise the definition of deref_d3_get_aa *)
+local_setup \<open>fold tidy_C_fun_def' ["d4_get_aa_bb",
+    "d5_get_aa_bb_part0",
+    "d6_get_aa_bb_part1",
+     "d8_get_aa_cc_part0", 
+    "d7_get_aa_cc", 
+    "d3_get_aa"]\<close>
+
+thm d3_get_aa'_def'[of ptr, simplified false_aux 
+    d4_get_aa_bb'_def'
+    d5_get_aa_bb_part0'_def'
+    d6_get_aa_bb_part1'_def'
+     d8_get_aa_cc_part0'_def' 
+    d7_get_aa_cc'_def' 
+ , simplified s0_eq, simplified ]
+
+
+lemma modify_comp: "do _ <- modify f ; modify f' od = modify (f' o f )"
+  by (monad_eq)
+
+lemma heap_t1_C_update_comp:
+  " heap_t1_C_update f o heap_t1_C_update f' = heap_t1_C_update (f o f')"
+  by fastforce
+
+lemma ptr_set_comp :
+   "(\<lambda>x. x(ptr := f (x ptr))) o (\<lambda>x. x(ptr := f' (x ptr))) = (\<lambda>x. x(ptr := f (f' (x ptr))))"
+  by fastforce
+
+(* used to devise the definition of deref_d9_set_aa *)
+thm d9_set_aa'_def[of ptr t2, simplified false_aux 
+    d10_set_aa_bb'_def
+    d11_set_aa_bb_part0'_def
+    d12_set_aa_bb_part1'_def
+     d13_set_aa_cc'_def 
+    d14_set_aa_cc_part0'_def 
+ , simplified s0_eq, simplified,
+  simplified modify_comp heap_t1_C_update_comp 
+ ptr_set_comp t1_C_updupd_same]
+(* very useful snippset
+using [[simp_trace]]
+  apply simp
+*)
+
+
+end
+
+
+
+definition deref_d9_set_aa :: "t1_C \<Rightarrow> t2_C \<Rightarrow> t1_C"
+   where  deref_d9_set_aa_def : 
+  "deref_d9_set_aa b t2 =
+        data_C_update
+                  ((\<lambda>a. Arrays.update a 2
+                          (a.[2] && 0xFFFFFF00 || UCAST(8 \<rightarrow> 32) (cc_C t2) && 0xFF)) \<circ>
+                   ((\<lambda>a. Arrays.update a (Suc 0)
+                           (a.[Suc 0] && 0xFFFF0000 || (bb_C t2 >> 16) && 0xFFFF)) \<circ>
+                    (\<lambda>a. Arrays.update a 0 (a.[0] && 0xFFFF || (bb_C t2 && 0xFFFF << 16)))))
+                  b"
+
+lemma get_set_aa[GetSetSimp] : "deref_d3_get_aa (deref_d9_set_aa b v) = v"
+  apply(simp add:deref_d3_get_aa_def deref_d9_set_aa_def)
+  apply(cases v)
+  apply simp
+  apply word_bitwise
+  done
+(* !! How to make this proof shorter *)
+lemma test3 : "unat (UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) x))
+         <  2147483648"
+
+  apply (simp add:unat_ucast_up_simp)
+  
+  apply (rule Orderings.order_class.order.strict_trans1)
+  thm WordPolish.INT_MIN_MAX_lemmas(30)[simplified UCHAR_MAX_def]
+   apply (rule WordPolish.INT_MIN_MAX_lemmas(30)[simplified UCHAR_MAX_def])
+  apply simp
+  done
+
+
+lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d3_get_aa (heap_t1_C s x')) 
+                                      od"
+  apply(simp add:d3_get_aa'_def'[simplified 
+    d4_get_aa_bb'_def'
+    d5_get_aa_bb_part0'_def'
+    d6_get_aa_bb_part1'_def'
+     d8_get_aa_cc_part0'_def' 
+    d7_get_aa_cc'_def' 
+ , simplified ])
+  apply(simp add:deref_d3_get_aa_def)
+  apply(simp add:test3)
+(* 
+!!
+0 <=s UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) x)
+How do I know that ?
+*)
+  apply monad_eq
+  sorry
+
+
+lemma d9_set_aa'_def_alt :
+"d9_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d9_set_aa (a ptr) v))) od )
+"                           
+  apply (simp add: d9_set_aa'_def[of ptr v, simplified 
+    d10_set_aa_bb'_def
+    d11_set_aa_bb_part0'_def
+    d12_set_aa_bb_part1'_def
+     d13_set_aa_cc'_def 
+    d14_set_aa_cc_part0'_def 
+ ,  simplified,
+  simplified modify_comp heap_t1_C_update_comp 
+ ptr_set_comp t1_C_updupd_same] deref_d9_set_aa_def)
+  apply monad_eq
+(* !! How do I know that 0 <=s UCAST(8 \<rightarrow> 32 signed) (cc_C v) ? *)
+  sorry 
+
+
+(*
+
+The following lemmas should be automatically generated by mk_lems (currently
+mk_lems does not deal with layouts)
+
+I have manually generated by examining corres_tac failures and getting inspiration
+from the onefield_bits example
+
+ *)
+
+
+(* copied from the Onefield_bits_dargentisa_CorresSetup.
+
+Changes: the type relation for the field, and the getter
+
+In fact useless
+ *)
+(*
+lemma corres_member_t1_C_aa_writable :
+"\<Gamma>' ! x = Some (TRecord typ (Boxed ReadOnly ptrl)) \<Longrightarrow>
+ val_rel (\<gamma> ! x) x' \<Longrightarrow>
+ type_rel (type_repr (TRecord typ (Boxed ReadOnly ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
+ type_rel (type_repr (fst (snd (typ ! 0)))) TYPE(t2_C) \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> Member (Var x) 0 : te \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> Var x : TRecord typ (Boxed ReadOnly ptrl) \<Longrightarrow>
+ corres state_rel (Member (Var x) 0) (do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d3_get_aa (heap_t1_C s x'))
+                                      od)
+  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
+"
+  by(tactic \<open>corres_take_boxed_tac @{context} 1\<close>)
+*)
+
+(* Same version corrected from the corres_tac failure *)
+lemma corres_member_t1_C_aa_writable[MemberReadOnly] :
+"\<Gamma>' ! x = Some (TRecord typ (Boxed ReadOnly ptrl)) \<Longrightarrow>
+ val_rel (\<gamma> ! x) x' \<Longrightarrow>
+ type_rel (type_repr (TRecord typ (Boxed ReadOnly ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
+ type_rel (type_repr (fst (snd (typ ! 0)))) TYPE(t2_C) \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> Member (Var x) 0 : te \<Longrightarrow>
+ \<Xi>', [], \<Gamma>' \<turnstile> Var x : TRecord typ (Boxed ReadOnly ptrl) \<Longrightarrow>
+ corres state_rel (Member (Var x) 0) (do z <- d3_get_aa' x';
+                                               gets (\<lambda>_. z)
+                                            od)
+  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
+"
+  apply(simp add:d3_get_aa'_def_alt)
+  by(tactic \<open>corres_take_boxed_tac @{context} 1\<close>)
+
+(* I changed the value relation of v' *)
+lemma corres_put_t1_C_aa_writable[PutBoxed] :
+"[] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
+\<Gamma>' ! x = Some (TRecord typ (Boxed Writable ptrl)) \<Longrightarrow>
+type_rel (type_repr (TRecord typ (Boxed Writable ptrl))) TYPE(t1_C ptr) \<Longrightarrow>
+val_rel (\<gamma> ! x) x' \<Longrightarrow>
+val_rel (\<gamma> ! v) (v' :: t2_C) \<Longrightarrow>
+\<Xi>', [], \<Gamma>' \<turnstile> Put (Var x) 0
+               (Var v) : TRecord
+                          (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)),
+                                     Present)])
+                          (Boxed Writable ptrl) \<Longrightarrow> 
+
+length typ = 1 \<Longrightarrow>
+corres state_rel (Put (Var x) 0 (Var v))
+ (do ptr <- gets (\<lambda>_. x');
+     _ <- d9_set_aa' ptr v'
+      ;
+     _ <- gets (\<lambda>_. ());
+     gets (\<lambda>_. ptr)
+  od)
+ \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
+
+  apply( simp add:d9_set_aa'_def_alt bind_assoc)
+by  (tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
+
+
+(* 
+
+End of non-generated
+
+*)
+
 (* Generating the specialised take and put lemmas *)
 
-local_setup \<open> local_setup_take_put_member_case_esac_specialised_lemmas "nested_unboxed_record_dargentisa.c" \<close>
+local_setup \<open> local_setup_take_put_member_case_esac_specialised_lemmas_ignore_types "nested_unboxed_record_dargentisa.c" ["t1_C"] \<close>
 local_setup \<open> fold tidy_C_fun_def' Cogent_functions \<close>
 
 end (* of locale *)
