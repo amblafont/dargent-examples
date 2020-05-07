@@ -50,6 +50,21 @@ The deref prefix means that we don't take a pointer as an argument
 contrary to the C code.
  *)
 find_theorems name:get_aa
+
+(* In fact, we could skip the intermediary parts functions and define
+d3_get_aa directly 
+
+
+(* generate tidy definition *)
+local_setup \<open>tidy_C_fun_def' "d2_get_aa"\<close>
+local_setup \<open>tidy_C_fun_def' "d3_get_aa_part0"\<close>   
+local_setup \<open>tidy_C_fun_def' "d4_get_aa_part1"\<close>   
+thm d2_get_aa'_def' d3_get_aa_part0'_def' d4_get_aa_part1'_def'
+ below 
+*)
+
+
+
 definition deref_d3_get_aa_part0 :: "t1_C \<Rightarrow> 32 word"
   where deref_d3_get_aa_part0_def[GetSetDefs]  :
    "deref_d3_get_aa_part0 b = ((data_C b).[0] >> 1)  &&  0x7FFFFFFF"
@@ -101,7 +116,7 @@ definition deref_d5_set_aa :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
       deref_d7_set_aa_part1 (deref_d6_set_aa_part0 b (v && 0x7FFFFFFF)) 
       ((v >> 31) && 1)"
 
-
+(*
 lemma 
   get_set_aa_eq_aux :
   fixes v :: "32 word"
@@ -111,11 +126,11 @@ lemma
     v"
   apply(word_bitwise)
   done
-
+*)
 
 lemma get_set_aa[GetSetSimp] : "deref_d2_get_aa (deref_d5_set_aa b v) = v"
   apply (simp add:GetSetSimp GetSetDefs)
-  apply (simp add:get_set_aa_eq_aux)
+  apply word_bitwise
   done
 
 (* Typeclass instances *)
@@ -127,14 +142,6 @@ definition val_rel_t1_C_def[ValRelSimp]:
 instance ..
 end
 
-instantiation t1_C ::  cogent_C_heap
-begin
-  definition is_valid_t1_C_def[IsValidSimp]:
-    " is_valid \<equiv> is_valid_t1_C "
-  definition heap_t1_C_def[HeapSimp]:
-    "heap = heap_t1_C"
-  instance ..
-end
 
 (* End of non generated stuff *)
 
@@ -452,8 +459,9 @@ corres state_rel (Put (Var x) 0 (Var v))
   od)
  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
   apply( simp add:d5_set_aa'_eq bind_assoc)
-  apply (simp add:corres_put_t1_C_aa_writable[simplified])
-  done
+by  (tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
+(*   apply (simp add:corres_put_t1_C_aa_writable[simplified]) 
+  done *)
   
 
 
