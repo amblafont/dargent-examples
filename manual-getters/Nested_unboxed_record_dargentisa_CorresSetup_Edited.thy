@@ -121,9 +121,12 @@ lemma aux1 : "unat (UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) 
   apply simp
   done
 
-(* is it even true? *)
-lemma aux2 : "0 <=s UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) (x  ))"
-  sorry
+
+lemma aux3: "0 <=s UCAST(8 \<rightarrow> 32 signed) x"
+  apply (rule zero_sle_ucast_up)
+  by (simp add: is_down_def target_size source_size)
+  
+
 
 lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
                                          gets (\<lambda>s. deref_d3_get_aa (heap_t1_C s x')) 
@@ -142,11 +145,10 @@ lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_
     d7_get_aa_cc'_def' 
  , simplified ]) *)
   
-  apply(simp add:aux1 aux2)
+  apply(simp add:aux1 aux3)
   by monad_eq
 
-lemma aux3: "0 <=s UCAST(8 \<rightarrow> 32 signed) x"
-  sorry
+
 
 lemma d9_set_aa'_def_alt :
 "d9_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
