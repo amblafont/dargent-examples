@@ -110,22 +110,13 @@ lemma get_set_aa[GetSetSimp] : "deref_d3_get_aa (deref_d9_set_aa b v) = v"
 context nested_unboxed_record_dargentisa begin
 
 (* !! How to make this proof shorter *)
-lemma aux1 : "unat (UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) x))
+lemma aux1 : "unat ( (UCAST(32 \<rightarrow> 8) x))
          <  2147483648"
-
-  apply (simp add:unat_ucast_up_simp)
-  
-  apply (rule Orderings.order_class.order.strict_trans1)
-  thm WordPolish.INT_MIN_MAX_lemmas(30)[simplified UCHAR_MAX_def]
-   apply (rule WordPolish.INT_MIN_MAX_lemmas(30)[simplified UCHAR_MAX_def])
-  apply simp
+  apply(unat_arith)
+  apply (simp add: unat_ucast_up_simp)
   done
 
 
-lemma aux3: "0 <=s UCAST(8 \<rightarrow> 32 signed) x"
-  apply (rule zero_sle_ucast_up)
-  by (simp add: is_down_def target_size source_size)
-  
 
 
 lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
@@ -136,6 +127,7 @@ lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_
    (@{context} addsimps 
   (List.map (easy_def @{context}) (getter_name :: lget_aa)))  1 \<close>)
   apply(simp add:deref_d3_get_aa_def)
+  
 (*
   apply(simp add:d3_get_aa'_def'[simplified 
     d4_get_aa_bb'_def'
@@ -144,9 +136,9 @@ lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_
      d8_get_aa_cc_part0'_def' 
     d7_get_aa_cc'_def' 
  , simplified ]) *)
-  
-  apply(simp add:aux1 aux3)
+  apply(simp add:L2opt aux1 )
   by monad_eq
+  
 
 
 
