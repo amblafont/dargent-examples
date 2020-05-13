@@ -11,6 +11,7 @@ imports "/home/laf027/cogent/branches/dargentisa/c-refinement/Deep_Embedding_Aut
 "/home/laf027/cogent/branches/dargentisa/c-refinement/Type_Relation_Generation"
 "build_onefield_bits/Onefield_bits_dargentisa_ACInstall"
 "build_onefield_bits/Onefield_bits_dargentisa_TypeProof"
+"../Complements"
 begin
 
 (* C type and value relations *)
@@ -44,40 +45,81 @@ class cogent_C_heap = cogent_C_val +
 
 
 (* Non generated stuff *)
-named_theorems GetSetDefs
-(* was obtained from find_theorems name:get_aa_part0.
-The deref prefix means that we don't take a pointer as an argument
-contrary to the C code.
- *)
-find_theorems name:get_aa
-
-(* In fact, we could skip the intermediary parts functions and define
-d3_get_aa directly 
 
 
-(* generate tidy definition *)
-local_setup \<open>tidy_C_fun_def' "d2_get_aa"\<close>
-local_setup \<open>tidy_C_fun_def' "d3_get_aa_part0"\<close>   
-local_setup \<open>tidy_C_fun_def' "d4_get_aa_part1"\<close>   
-thm d2_get_aa'_def' d3_get_aa_part0'_def' d4_get_aa_part1'_def'
- below 
+
+ML \<open>val g = get_callgraph @{theory} "onefield_bits_dargentisa.c"\<close>
+ML \<open>val getter_name = "d2_get_aa"\<close>
+ML \<open>val setter_name = "d5_set_aa"\<close>
+ML \<open>val lget_aa = rec_called_funs g getter_name\<close>
+ML \<open>val lset_aa = rec_called_funs g setter_name\<close>
+
+context onefield_bits_dargentisa begin
+(* Tidy the definitions of getters *)
+local_setup \<open>fold tidy_C_fun_def' (getter_name :: lget_aa)\<close>
+end
+
+ML \<open>fun prefix_loc s = "onefield_bits_dargentisa." ^ s\<close>
+
+local_setup \<open>
+fn ctxt =>
+my_generate_fun "deref_d2_get_aa" ["w"]
+ (generate_getter_term ctxt 
+(prefix_loc getter_name) 
+(List.map prefix_loc lget_aa)
+ "heap_t1_C") ctxt
+\<close>
+
+(* TODO: move this lemma in the C-parser library, where t1_C_updupd_same
+is generated (c-parser/recursive_records/recursive_record_package.ML)
 *)
+lemma heap_t1_C_update_comp[simp]:
+  " heap_t1_C_update f o heap_t1_C_update f' = heap_t1_C_update (f o f')"
+  by fastforce
+
+local_setup \<open>
+fn ctxt =>
+my_generate_fun "deref_d5_set_aa" ["w", "v"]
+ (generate_setter_term ctxt 
+(prefix_loc setter_name) 
+(List.map prefix_loc lset_aa)
+ "heap_t1_C_update") ctxt
+\<close>
 
 
+lemma get_set_aa[GetSetSimp] : "deref_d2_get_aa (deref_d5_set_aa b v) = v"
+  apply(simp add:deref_d2_get_aa_def deref_d5_set_aa_def)
+  apply(cases v)
+  apply simp
+  by word_bitwise
 
-definition deref_d3_get_aa_part0 :: "t1_C \<Rightarrow> 32 word"
-  where deref_d3_get_aa_part0_def[GetSetDefs]  :
-   "deref_d3_get_aa_part0 b = ((data_C b).[0] >> 1)  &&  0x7FFFFFFF"
+(* Getter/Setter relate to their C counterparts *)
 
 
-definition deref_d4_get_aa_part1 :: "t1_C \<Rightarrow> 32 word"
-  where  deref_d4_get_aa_part1_def[GetSetDefs]  :
- "deref_d4_get_aa_part1 b = (data_C b).[1]  && 1"
+context onefield_bits_dargentisa begin
 
-definition deref_d2_get_aa :: "t1_C \<Rightarrow> 32 word" 
-  where deref_d2_get_aa_def[GetSetDefs]  :
-  "deref_d2_get_aa b = deref_d3_get_aa_part0 b || 
-  (deref_d4_get_aa_part1 b << 31)"
+ML \<open>simp_tac\<close>
+
+lemma d2_get_aa'_def_alt : "d2_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x')) 
+                                      od"
+  apply(tactic \<open>  simp_tac
+   (@{context} addsimps 
+  (List.map (easy_def @{context}) (getter_name :: lget_aa)))  1 \<close>)
+  apply(simp add:deref_d2_get_aa_def)
+  by monad_eq
+
+lemma d5_set_aa'_def_alt :
+"d5_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d5_set_aa (a ptr) v))) od )
+" 
+  apply(tactic \<open>  simp_tac
+   (@{context} addsimps 
+  (List.map (normal_def @{context}) (setter_name :: lset_aa)))  1 \<close>)
+  apply(simp add:deref_d5_set_aa_def)
+  by (monad_eq simp add:comp_def)
+
+end
 
 (* no C counterpart (would be the counterpart of
 an unboxed record nested in a record layout: then the 
@@ -90,48 +132,8 @@ definition t1_C_to_uval :: "t1_C \<Rightarrow> (_,_,_) uval"
  where t1_C_to_uval_def[GetSetSimp]  :
   "t1_C_to_uval b = URecord [(UPrim (LU32 (deref_d2_get_aa b)), t1_C_aa_type )]"
 
-(* Now the setters *)
-find_theorems name:set_aa name:def
-
-definition deref_d6_set_aa_part0 :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
-  where deref_d6_set_aa_part0_def[GetSetDefs] : "deref_d6_set_aa_part0 b v =
-    data_C_update (\<lambda>a. Arrays.update a 0
-                            (a.[0] && 1 ||  (v && 0x7FFFFFFF << Suc 0))) b"
-
-definition deref_d7_set_aa_part1 :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
-  where  deref_d7_set_aa_part1_def[GetSetDefs] :
-  "deref_d7_set_aa_part1 b v =
-    data_C_update (\<lambda>a. Arrays.update a (Suc 0)
-                            (a.[Suc 0] && 0xFFFFFFFE ||
-                             v && 1)) b"
 
 
-
-(* TODO: tell Zilin to remove this redundancy mask (&& 1 and && 0x7FFF..).
-Indeed, they are already performed in the parts
- *)
-definition deref_d5_set_aa :: "t1_C \<Rightarrow> 32 word \<Rightarrow> t1_C"
-   where  deref_d5_set_aa_def[GetSetDefs] : 
-  "deref_d5_set_aa b v =
-      deref_d7_set_aa_part1 (deref_d6_set_aa_part0 b (v && 0x7FFFFFFF)) 
-      ((v >> 31) && 1)"
-
-(*
-lemma 
-  get_set_aa_eq_aux :
-  fixes v :: "32 word"
-  shows
-  "(b0 && 1 || (v && 0x7FFFFFFF << Suc 0) >> Suc 0) && 0x7FFFFFFF ||
-   ((b1 && 0xFFFFFFFE || (v >> 31) && 1) && 1 << 31) =
-    v"
-  apply(word_bitwise)
-  done
-*)
-
-lemma get_set_aa[GetSetSimp] : "deref_d2_get_aa (deref_d5_set_aa b v) = v"
-  apply (simp add:GetSetSimp GetSetDefs)
-  apply word_bitwise
-  done
 
 (* Typeclass instances *)
 instantiation t1_C :: cogent_C_val
@@ -382,12 +384,7 @@ lemma corres_let_put_t1_C_aa_writable[LetPutBoxed] :
 
 
 
-lemma d2_get_aa'_eq : "d2_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
-                                         gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x')) 
-                                      od"
-  apply (simp add:GetSetSimp d2_get_aa'_def GetSetDefs d3_get_aa_part0'_def d4_get_aa_part1'_def)
-  apply(monad_eq)
-  done
+
   
 
 (* This one is useful, not the previous *)
@@ -421,19 +418,13 @@ This is because when the C code calls another function, AutoCorres always genera
 such a useless gets. 
 *)
   apply simp
-  apply (simp add: d2_get_aa'_eq)
+  apply (simp add: d2_get_aa'_def_alt)
   apply (simp add:bind_assoc)
   apply (simp add:corres_take_t1_C_aa_writable)
   done
 
 
-lemma d5_set_aa'_eq :
-"d5_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
-        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d5_set_aa (a ptr) v))) od )
-"                                     
-  apply (simp add:GetSetSimp d5_set_aa'_def GetSetDefs d6_set_aa_part0'_def d7_set_aa_part1'_def)
-  apply monad_eq
-  done
+
   
 
 (* This lemma was guessed from the corres_tac missing part*)
@@ -458,7 +449,7 @@ corres state_rel (Put (Var x) 0 (Var v))
      gets (\<lambda>_. ptr)
   od)
  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
-  apply( simp add:d5_set_aa'_eq bind_assoc)
+  apply( simp add:d5_set_aa'_def_alt bind_assoc)
 by  (tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
 (*   apply (simp add:corres_put_t1_C_aa_writable[simplified]) 
   done *)

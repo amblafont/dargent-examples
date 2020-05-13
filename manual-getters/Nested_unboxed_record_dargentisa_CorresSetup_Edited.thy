@@ -11,6 +11,7 @@ imports "/home/laf027/cogent/branches/dargentisa/c-refinement/Deep_Embedding_Aut
 "/home/laf027/cogent/branches/dargentisa/c-refinement/Type_Relation_Generation"
 "build_nested_unboxed_record/Nested_unboxed_record_dargentisa_ACInstall"
 "build_nested_unboxed_record/Nested_unboxed_record_dargentisa_TypeProof"
+"../Complements"
 begin
 
 (* C type and value relations *)
@@ -42,16 +43,124 @@ class cogent_C_heap = cogent_C_val +
 
 (* Non-generated stuff *)
 
-(* was obtained by the local_setup and anonymous context 
-later in this file *)
-definition deref_d3_get_aa :: "t1_C \<Rightarrow> t2_C"  
-  where deref_d3_get_aa_def : 
-   "deref_d3_get_aa a =
-   (t2_C
-   ((data_C a.[0] >> 16) && 0xFFFF ||
-    (data_C a.[Suc 0] && 0xFFFF << 16))
-   (UCAST(32 \<rightarrow> 8) (data_C a.[2] && 0xFF)))"
 
+ML \<open>val g = get_callgraph @{theory} "nested_unboxed_record_dargentisa.c"\<close>
+ML \<open>val getter_name = "d3_get_aa"\<close>
+ML \<open>val setter_name = "d9_set_aa"\<close>
+ML \<open>val lget_aa = rec_called_funs g getter_name\<close>
+ML \<open>val lset_aa = rec_called_funs g setter_name\<close>
+
+
+context nested_unboxed_record_dargentisa begin
+(* Tidy the definitions of getters *)
+local_setup \<open>fold tidy_C_fun_def' (getter_name :: lget_aa)\<close>
+end
+
+ML \<open>fun prefix_loc s = "nested_unboxed_record_dargentisa." ^ s\<close>
+
+(* Code to be used later to get the name of the heap getter/setter
+ML \<open> (HeapInfo.get @{theory}) |> Symtab.keys \<close>
+ML \<open>
+val heap = Symtab.lookup (HeapInfo.get @{theory}) 
+"nested_unboxed_record_dargentisa.c" |> the
+           |> #heap_info  |> #heap_setters
+|> (fn x => Typtab.lookup x 
+  (Syntax.read_typ @{context} "t1_C"))
+\<close>
+*)
+
+local_setup \<open>
+fn ctxt =>
+my_generate_fun "deref_d3_get_aa" ["w"]
+ (generate_getter_term ctxt 
+(prefix_loc getter_name) 
+(List.map prefix_loc lget_aa)
+ "heap_t1_C") ctxt
+\<close>
+
+(* TODO: move this lemma in the C-parser library, where t1_C_updupd_same
+is generated (c-parser/recursive_records/recursive_record_package.ML)
+*)
+lemma heap_t1_C_update_comp[simp]:
+  " heap_t1_C_update f o heap_t1_C_update f' = heap_t1_C_update (f o f')"
+  by fastforce
+
+
+local_setup \<open>
+fn ctxt =>
+my_generate_fun "deref_d9_set_aa" ["w", "v"]
+ (generate_setter_term ctxt 
+(prefix_loc setter_name) 
+(List.map prefix_loc lset_aa)
+ "heap_t1_C_update") ctxt
+\<close>
+
+
+
+lemma get_set_aa[GetSetSimp] : "deref_d3_get_aa (deref_d9_set_aa b v) = v"
+  apply(simp add:deref_d3_get_aa_def deref_d9_set_aa_def)
+  apply(cases v)
+  apply simp
+  by word_bitwise
+
+
+(* Getter/Setter relate to their C counterparts *)
+
+
+context nested_unboxed_record_dargentisa begin
+
+(* !! How to make this proof shorter *)
+lemma aux1 : "unat (UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) x))
+         <  2147483648"
+
+  apply (simp add:unat_ucast_up_simp)
+  
+  apply (rule Orderings.order_class.order.strict_trans1)
+  thm WordPolish.INT_MIN_MAX_lemmas(30)[simplified UCHAR_MAX_def]
+   apply (rule WordPolish.INT_MIN_MAX_lemmas(30)[simplified UCHAR_MAX_def])
+  apply simp
+  done
+
+(* is it even true? *)
+lemma aux2 : "0 <=s UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) (x  ))"
+  sorry
+
+lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d3_get_aa (heap_t1_C s x')) 
+                                      od"
+
+  apply(tactic \<open>  simp_tac
+   (@{context} addsimps 
+  (List.map (easy_def @{context}) (getter_name :: lget_aa)))  1 \<close>)
+  apply(simp add:deref_d3_get_aa_def)
+(*
+  apply(simp add:d3_get_aa'_def'[simplified 
+    d4_get_aa_bb'_def'
+    d5_get_aa_bb_part0'_def'
+    d6_get_aa_bb_part1'_def'
+     d8_get_aa_cc_part0'_def' 
+    d7_get_aa_cc'_def' 
+ , simplified ]) *)
+  
+  apply(simp add:aux1 aux2)
+  by monad_eq
+
+lemma aux3: "0 <=s UCAST(8 \<rightarrow> 32 signed) x"
+  sorry
+
+lemma d9_set_aa'_def_alt :
+"d9_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d9_set_aa (a ptr) v))) od )
+"        
+  apply(tactic \<open>  simp_tac
+   (@{context} addsimps 
+  (List.map (normal_def @{context}) (setter_name :: lset_aa)))  1 \<close>)
+
+  apply (simp add: deref_d9_set_aa_def)
+  apply(simp add:aux3)
+  by (monad_eq simp add: comp_def)  
+  
+end
 
 
 (* For the type/value relation *)
@@ -68,7 +177,6 @@ definition val_rel_t1_C_def[ValRelSimp]:
     " val_rel uv (x :: t1_C) \<equiv> \<exists>aa. uv = URecord [aa] \<and> val_rel (fst aa) (deref_d3_get_aa x)"
 instance ..
 end
-
 
 
 (* End of non-generated stuff *)
@@ -124,132 +232,7 @@ Non-generated stuff
 
 
 
-context  
-  fixes s0  :: "lifted_globals"  
-begin
-lemma s0_eq : "\<And> (e :: lifted_globals \<Rightarrow> 'a). gets e = return (e s0)"
-  sorry
 
-lemma false_aux : 
- "\<And> e. guard e = gets (\<lambda>_ . ())"
-  apply simp
-  sorry
-
-(* used to devise the definition of deref_d3_get_aa *)
-local_setup \<open>fold tidy_C_fun_def' ["d4_get_aa_bb",
-    "d5_get_aa_bb_part0",
-    "d6_get_aa_bb_part1",
-     "d8_get_aa_cc_part0", 
-    "d7_get_aa_cc", 
-    "d3_get_aa"]\<close>
-
-thm d3_get_aa'_def'[of ptr, simplified false_aux 
-    d4_get_aa_bb'_def'
-    d5_get_aa_bb_part0'_def'
-    d6_get_aa_bb_part1'_def'
-     d8_get_aa_cc_part0'_def' 
-    d7_get_aa_cc'_def' 
- , simplified s0_eq, simplified ]
-
-
-lemma modify_comp: "do _ <- modify f ; modify f' od = modify (f' o f )"
-  by (monad_eq)
-
-lemma heap_t1_C_update_comp:
-  " heap_t1_C_update f o heap_t1_C_update f' = heap_t1_C_update (f o f')"
-  by fastforce
-
-lemma ptr_set_comp :
-   "(\<lambda>x. x(ptr := f (x ptr))) o (\<lambda>x. x(ptr := f' (x ptr))) = (\<lambda>x. x(ptr := f (f' (x ptr))))"
-  by fastforce
-
-(* used to devise the definition of deref_d9_set_aa *)
-thm d9_set_aa'_def[of ptr t2, simplified false_aux 
-    d10_set_aa_bb'_def
-    d11_set_aa_bb_part0'_def
-    d12_set_aa_bb_part1'_def
-     d13_set_aa_cc'_def 
-    d14_set_aa_cc_part0'_def 
- , simplified s0_eq, simplified,
-  simplified modify_comp heap_t1_C_update_comp 
- ptr_set_comp t1_C_updupd_same]
-(* very useful snippset
-using [[simp_trace]]
-  apply simp
-*)
-
-
-end
-
-
-
-definition deref_d9_set_aa :: "t1_C \<Rightarrow> t2_C \<Rightarrow> t1_C"
-   where  deref_d9_set_aa_def : 
-  "deref_d9_set_aa b t2 =
-        data_C_update
-                  ((\<lambda>a. Arrays.update a 2
-                          (a.[2] && 0xFFFFFF00 || UCAST(8 \<rightarrow> 32) (cc_C t2) && 0xFF)) \<circ>
-                   ((\<lambda>a. Arrays.update a (Suc 0)
-                           (a.[Suc 0] && 0xFFFF0000 || (bb_C t2 >> 16) && 0xFFFF)) \<circ>
-                    (\<lambda>a. Arrays.update a 0 (a.[0] && 0xFFFF || (bb_C t2 && 0xFFFF << 16)))))
-                  b"
-
-lemma get_set_aa[GetSetSimp] : "deref_d3_get_aa (deref_d9_set_aa b v) = v"
-  apply(simp add:deref_d3_get_aa_def deref_d9_set_aa_def)
-  apply(cases v)
-  apply simp
-  apply word_bitwise
-  done
-(* !! How to make this proof shorter *)
-lemma test3 : "unat (UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) x))
-         <  2147483648"
-
-  apply (simp add:unat_ucast_up_simp)
-  
-  apply (rule Orderings.order_class.order.strict_trans1)
-  thm WordPolish.INT_MIN_MAX_lemmas(30)[simplified UCHAR_MAX_def]
-   apply (rule WordPolish.INT_MIN_MAX_lemmas(30)[simplified UCHAR_MAX_def])
-  apply simp
-  done
-
-
-lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
-                                         gets (\<lambda>s. deref_d3_get_aa (heap_t1_C s x')) 
-                                      od"
-  apply(simp add:d3_get_aa'_def'[simplified 
-    d4_get_aa_bb'_def'
-    d5_get_aa_bb_part0'_def'
-    d6_get_aa_bb_part1'_def'
-     d8_get_aa_cc_part0'_def' 
-    d7_get_aa_cc'_def' 
- , simplified ])
-  apply(simp add:deref_d3_get_aa_def)
-  apply(simp add:test3)
-(* 
-!!
-0 <=s UCAST(8 \<rightarrow> 32 signed) (UCAST(32 \<rightarrow> 8) x)
-How do I know that ?
-*)
-  apply monad_eq
-  sorry
-
-
-lemma d9_set_aa'_def_alt :
-"d9_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
-        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d9_set_aa (a ptr) v))) od )
-"                           
-  apply (simp add: d9_set_aa'_def[of ptr v, simplified 
-    d10_set_aa_bb'_def
-    d11_set_aa_bb_part0'_def
-    d12_set_aa_bb_part1'_def
-     d13_set_aa_cc'_def 
-    d14_set_aa_cc_part0'_def 
- ,  simplified,
-  simplified modify_comp heap_t1_C_update_comp 
- ptr_set_comp t1_C_updupd_same] deref_d9_set_aa_def)
-  apply monad_eq
-(* !! How do I know that 0 <=s UCAST(8 \<rightarrow> 32 signed) (cc_C v) ? *)
-  sorry 
 
 
 (*
