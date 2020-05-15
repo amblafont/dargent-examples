@@ -46,30 +46,6 @@ class cogent_C_heap = cogent_C_val +
 
 (* Non generated stuff *)
 
-
-
-ML \<open>val g = get_callgraph @{theory} "onefield_bits_dargentisa.c"\<close>
-ML \<open>val getter_name = "d2_get_aa"\<close>
-ML \<open>val setter_name = "d5_set_aa"\<close>
-ML \<open>val lget_aa = rec_called_funs g getter_name\<close>
-ML \<open>val lset_aa = rec_called_funs g setter_name\<close>
-
-context onefield_bits_dargentisa begin
-(* Tidy the definitions of getters *)
-local_setup \<open>fold tidy_C_fun_def' (getter_name :: lget_aa)\<close>
-end
-
-ML \<open>fun prefix_loc s = "onefield_bits_dargentisa." ^ s\<close>
-
-local_setup \<open>
-fn ctxt =>
-my_generate_fun "deref_d2_get_aa" ["w"]
- (generate_getter_term ctxt 
-(prefix_loc getter_name) 
-(List.map prefix_loc lget_aa)
- "heap_t1_C") ctxt
-\<close>
-
 (* TODO: move this lemma in the C-parser library, where t1_C_updupd_same
 is generated (c-parser/recursive_records/recursive_record_package.ML)
 *)
@@ -77,14 +53,24 @@ lemma heap_t1_C_update_comp[simp]:
   " heap_t1_C_update f o heap_t1_C_update f' = heap_t1_C_update (f o f')"
   by fastforce
 
-local_setup \<open>
-fn ctxt =>
-my_generate_fun "deref_d5_set_aa" ["w", "v"]
- (generate_setter_term ctxt 
-(prefix_loc setter_name) 
-(List.map prefix_loc lset_aa)
- "heap_t1_C_update") ctxt
+
+ML 
+\<open>
+local
+  val filename = "onefield_bits_dargentisa.c"
+in
+val uvals = read_table filename @{theory}
+val g = get_callgraph @{theory} filename : callgraph
+val heap_info = (Symtab.lookup (HeapInfo.get @{theory}) 
+filename |> the  |> #heap_info)
+end
 \<close>
+
+context onefield_bits_dargentisa begin
+
+(* Unfold the definition of C getters and setters *)
+
+local_setup \<open>generate_isa_getset_records g heap_info uvals  \<close>
 
 
 lemma get_set_aa[GetSetSimp] : "deref_d2_get_aa (deref_d5_set_aa b v) = v"
@@ -96,27 +82,17 @@ lemma get_set_aa[GetSetSimp] : "deref_d2_get_aa (deref_d5_set_aa b v) = v"
 (* Getter/Setter relate to their C counterparts *)
 
 
-context onefield_bits_dargentisa begin
-
-ML \<open>simp_tac\<close>
-
-lemma d2_get_aa'_def_alt : "d2_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+lemma d2_get_aa'_def_alt[GetSetSimp] : "d2_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
                                          gets (\<lambda>s. deref_d2_get_aa (heap_t1_C s x')) 
                                       od"
-  apply(tactic \<open>  simp_tac
-   (@{context} addsimps 
-  (List.map (easy_def @{context}) (getter_name :: lget_aa)))  1 \<close>)
-  apply(simp add:deref_d2_get_aa_def)
+  apply(simp add:d2_get_aa'_def' deref_d2_get_aa_def)  
   by monad_eq
 
-lemma d5_set_aa'_def_alt :
+lemma d5_set_aa'_def_alt[GetSetSimp] :
 "d5_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
         modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d5_set_aa (a ptr) v))) od )
 " 
-  apply(tactic \<open>  simp_tac
-   (@{context} addsimps 
-  (List.map (normal_def @{context}) (setter_name :: lset_aa)))  1 \<close>)
-  apply(simp add:deref_d5_set_aa_def)
+  apply(simp add:deref_d5_set_aa_def d5_set_aa'_def')
   by (monad_eq simp add:comp_def)
 
 end
@@ -130,7 +106,7 @@ abbreviation t1_C_aa_type
 
 definition t1_C_to_uval :: "t1_C \<Rightarrow> (_,_,_) uval" 
  where t1_C_to_uval_def[GetSetSimp]  :
-  "t1_C_to_uval b = URecord [(UPrim (LU32 (deref_d2_get_aa b)), t1_C_aa_type )]"
+  "t1_C_to_uval b = URecord [(UPrim (LU32 (onefield_bits_dargentisa.deref_d2_get_aa b)), t1_C_aa_type )]"
 
 
 
@@ -144,6 +120,102 @@ definition val_rel_t1_C_def[ValRelSimp]:
 instance ..
 end
 
+(* main_prog should depend on x', e' and z *)
+ML\<open> fun mk_specialised_corres_take_basic (field_num:int) uval main_prog custom_field_ty ctxt =
+(* Generate specialised Take lemmas for the Writables and Unboxeds.*)
+ let
+  val _ = tracing "mk_specialised_corres_take"
+  (* define auxiliary values and functions.*)
+  val struct_C_nm     = get_ty_nm_C uval;
+  val struct_ty       = Syntax.read_typ ctxt struct_C_nm;
+  val struct_C_ptr_ty = Syntax.read_typ ctxt (struct_C_nm ^ " ptr");
+    
+  val isa_field_num   = encode_isa_int ctxt field_num;
+  val get_clean_term  = fn str:string => Syntax.read_term ctxt str |> strip_atype;
+  val state_rel       = get_clean_term "state_rel";
+  
+  val ml_sigil        = get_uval_sigil uval;
+  val isa_sigil = case ml_sigil of
+                ReadOnly => @{term "Boxed ReadOnly undefined"}
+              | Writable => @{term "Boxed Writable undefined"}
+              | Unboxed  => @{term "Unboxed"}
+  (* Unboxed-Take and Boxed-Take use different types.*)
+  val ty = case ml_sigil of
+            Writable => struct_C_ptr_ty
+          | Unboxed  => struct_ty
+          | _        => error "ty in mk_specialised_corres_take failed.";
+
+  (* define meta-assumptions in specialised corres lemmas.*)
+  val ass1 = @{mk_term "\<Gamma>' ! x = Some (TRecord typ ?isa_sigil)" isa_sigil} isa_sigil;
+  val ass2 = @{term    "[] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e"};
+  val ass3 = @{mk_term "val_rel (\<gamma>!x) ?x'" x'} (Free ("x'", ty));
+  val ass4 = strip_atype @{term "\<lambda> isa_sigil ty . type_rel (type_repr (TRecord typ isa_sigil)) ty"}
+            $ isa_sigil $ (Const ("Pure.type", Term.itselfT ty) |> strip_atype);
+  val ass5 = strip_atype @{term "\<lambda> field_num ty . 
+            type_rel (type_repr (fst (snd (typ ! field_num)))) ty"}
+            $ isa_field_num $ (Const ("Pure.type", Term.itselfT custom_field_ty(* field_ty *)) |> strip_atype);
+  val ass6 = strip_atype @{term "\<lambda> field_num . \<Xi>', [], \<Gamma>' \<turnstile> Take (Var x) field_num e : te"} $ isa_field_num;
+  val ass7 = strip_atype @{term "\<lambda> isa_sigil . \<Xi>', [], \<Gamma>x \<turnstile> (Var x) : TRecord typ isa_sigil"} $ isa_sigil;
+  val ass8 = strip_atype @{term "\<lambda> isa_sigil field_num .
+             (\<Xi>', [], Some (fst (snd (typ ! field_num))) #
+              Some (TRecord (typ[field_num := (fst (typ ! field_num), fst (snd (typ ! field_num)), taken)]) isa_sigil) # \<Gamma>e \<turnstile> e : te)"}
+            $ isa_sigil $ isa_field_num;
+  (* For some reason, I cannot use the mk-term antiquotation for ass9.*)
+  val ass9 = strip_atype @{term "\<lambda> field_num . [] \<turnstile> fst (snd (typ ! field_num)) :\<kappa> k"} $ isa_field_num;
+  val ass10= @{term "(S \<in> k \<or> taken = Taken)"};
+  (* ass11 involves a bit ugly hacks. Maybe I can use \<lambda> for field_num instead of \<And>.*)
+  val ass11 = let
+               fun rep_Bound_n_with n new = strip_1qnt o
+                   (Term.map_aterms (fn trm => if trm = Bound n then new else trm));
+              in
+              (strip_atype @{term "\<And> state_rel isa_sigil field_num vf z. val_rel vf z \<Longrightarrow>
+               corres state_rel e (e' z) \<xi> (vf # (\<gamma>!x) # \<gamma>) \<Xi>'
+                (Some (fst (snd (typ ! field_num))) # Some (TRecord (typ[field_num := (fst (typ ! field_num), fst (snd (typ ! field_num)), taken)])
+                isa_sigil) # \<Gamma>e) \<sigma> s"})
+               |> rep_Bound_n_with 4 state_rel
+               |> rep_Bound_n_with 3 isa_sigil
+               |> rep_Bound_n_with 2 isa_field_num
+               |> up_ty_of_qnt "z" custom_field_ty ctxt
+              end;
+  val prms = map (HOLogic.mk_Trueprop o strip_atype)
+   [ass1, ass2, ass3, ass4, ass5, ass6, ass7, ass8, ass9, ass10] @ [ass11];
+  (* define the conclusion of the lemma.*)
+  (* Unboxed-Take and Boxed-Take have different conclusions.*)
+  val _ =
+   case ml_sigil of
+      ReadOnly => error "ReadOnly is not supported by cncl in mk_specialised_corres_take. :("
+    | _ => ()
+  val cncl =
+     strip_atype @{term "\<lambda> state_rel field_num prog .
+         corres state_rel
+          (Take (Var x) field_num e)
+          prog
+           \<xi> \<gamma> \<Xi>' \<Gamma>' \<sigma> s"}
+         $ state_rel $ isa_field_num $ main_prog
+         |> HOLogic.mk_Trueprop
+  val take_term = mk_meta_imps prms cncl ctxt |> Syntax.check_term ctxt;
+  val _ = tracing ("    finished mk_spec_corres_take for struct " ^ (get_uval_name uval) ^ " " ^  Int.toString field_num);
+ in take_term
+ end;
+
+ fun mk_specialised_corres_take_custom (field_num:int) uval 
+   custom_getter custom_field_ty ctxt =
+   mk_specialised_corres_take_basic field_num uval  
+(@{term "\<lambda> getter.
+(do v <- getter x' ;
+                                        z <- gets (\<lambda>_. v) ;
+                                          e' z
+                                      od)
+" } (* custom_getter *)
+$ custom_getter) custom_field_ty ctxt
+
+\<close>
+
+ML \<open>
+mk_specialised_corres_take_custom 0 monuval @{term onefield_bits_dargentisa.d2_get_aa'}  
+ @{typ "32 word"}
+@{context} |> Syntax.string_of_term @{context} |> tracing
+\<close>
 
 (* End of non generated stuff *)
 
@@ -408,8 +480,8 @@ lemma corres_take_t1_C_aa_writable'[TakeBoxed] :
        Some (TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), taken)]) (Boxed Writable undefined)) # \<Gamma>e)
       \<sigma> s) \<Longrightarrow>
  corres state_rel (Take (Var x) 0 e) (do v <- d2_get_aa' x' ;
-                                        z <- gets (\<lambda>_. v) ;
-                                          e' z
+                                         gets (\<lambda>_. v) >>=
+                                          e' 
                                       od)
   \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
 "
@@ -417,11 +489,8 @@ lemma corres_take_t1_C_aa_writable'[TakeBoxed] :
 This is because when the C code calls another function, AutoCorres always generate
 such a useless gets. 
 *)
-  apply simp
-  apply (simp add: d2_get_aa'_def_alt)
-  apply (simp add:bind_assoc)
-  apply (simp add:corres_take_t1_C_aa_writable)
-  done
+ by(tactic \<open>corres_take_boxed_tac @{context} 1\<close>)
+  
 
 
 
@@ -449,21 +518,28 @@ corres state_rel (Put (Var x) 0 (Var v))
      gets (\<lambda>_. ptr)
   od)
  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
-  apply( simp add:d5_set_aa'_def_alt bind_assoc)
+(*  apply( simp add:d5_set_aa'_def_alt bind_assoc) *)
 by  (tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
 (*   apply (simp add:corres_put_t1_C_aa_writable[simplified]) 
   done *)
   
 
 
+ML \<open>mk_urecord_lems_for_uval
+ "onefield_bits_dargentisa.c" @{context}
+(URecord ("t1", Writable, NONE) )
+\<close>
 
+print_ML_antiquotations
 (* End of non generated stuff *)
 
 (* Generating the specialised take and put lemmas *)
 
 (* Non-generated stuff: supplementary argument: list of ignored types *)
 local_setup \<open> local_setup_take_put_member_case_esac_specialised_lemmas_ignore_types "onefield_bits_dargentisa.c"
-    ["t1_C"] \<close>
+    ["t1_C"] 
+
+ \<close>
 local_setup \<open> fold tidy_C_fun_def' Cogent_functions \<close>
 
 end (* of locale *)

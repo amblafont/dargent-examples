@@ -43,39 +43,24 @@ class cogent_C_heap = cogent_C_val +
 
 (* Non-generated stuff *)
 
-
+(*
 ML \<open>val g = get_callgraph @{theory} "nested_unboxed_record_dargentisa.c"\<close>
 ML \<open>val getter_name = "d3_get_aa"\<close>
 ML \<open>val setter_name = "d9_set_aa"\<close>
 ML \<open>val lget_aa = rec_called_funs g getter_name\<close>
 ML \<open>val lset_aa = rec_called_funs g setter_name\<close>
-
-
-context nested_unboxed_record_dargentisa begin
-(* Tidy the definitions of getters *)
-local_setup \<open>fold tidy_C_fun_def' (getter_name :: lget_aa)\<close>
-end
-
-ML \<open>fun prefix_loc s = "nested_unboxed_record_dargentisa." ^ s\<close>
-
-(* Code to be used later to get the name of the heap getter/setter
-ML \<open> (HeapInfo.get @{theory}) |> Symtab.keys \<close>
-ML \<open>
-val heap = Symtab.lookup (HeapInfo.get @{theory}) 
-"nested_unboxed_record_dargentisa.c" |> the
-           |> #heap_info  |> #heap_setters
-|> (fn x => Typtab.lookup x 
-  (Syntax.read_typ @{context} "t1_C"))
-\<close>
 *)
 
-local_setup \<open>
-fn ctxt =>
-my_generate_fun "deref_d3_get_aa" ["w"]
- (generate_getter_term ctxt 
-(prefix_loc getter_name) 
-(List.map prefix_loc lget_aa)
- "heap_t1_C") ctxt
+ML 
+\<open>
+local
+  val filename = "nested_unboxed_record_dargentisa.c"
+in
+val uvals = read_table filename @{theory}
+val g = get_callgraph @{theory} filename : callgraph
+val heap_info = (Symtab.lookup (HeapInfo.get @{theory}) 
+filename |> the  |> #heap_info)
+end
 \<close>
 
 (* TODO: move this lemma in the C-parser library, where t1_C_updupd_same
@@ -86,16 +71,9 @@ lemma heap_t1_C_update_comp[simp]:
   by fastforce
 
 
-local_setup \<open>
-fn ctxt =>
-my_generate_fun "deref_d9_set_aa" ["w", "v"]
- (generate_setter_term ctxt 
-(prefix_loc setter_name) 
-(List.map prefix_loc lset_aa)
- "heap_t1_C_update") ctxt
-\<close>
-
-
+context nested_unboxed_record_dargentisa begin
+(* Tidy the definitions of getters *)
+local_setup \<open>generate_isa_getset_records g heap_info uvals  \<close>
 
 lemma get_set_aa[GetSetSimp] : "deref_d3_get_aa (deref_d9_set_aa b v) = v"
   apply(simp add:deref_d3_get_aa_def deref_d9_set_aa_def)
@@ -107,8 +85,6 @@ lemma get_set_aa[GetSetSimp] : "deref_d3_get_aa (deref_d9_set_aa b v) = v"
 (* Getter/Setter relate to their C counterparts *)
 
 
-context nested_unboxed_record_dargentisa begin
-
 (* !! How to make this proof shorter *)
 lemma aux1 : "unat ( (UCAST(32 \<rightarrow> 8) x))
          <  2147483648"
@@ -117,42 +93,22 @@ lemma aux1 : "unat ( (UCAST(32 \<rightarrow> 8) x))
   done
 
 
-
-
-lemma d3_get_aa'_def_alt : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+lemma d3_get_aa'_def_alt[GetSetSimp] : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
                                          gets (\<lambda>s. deref_d3_get_aa (heap_t1_C s x')) 
                                       od"
 
-  apply(tactic \<open>  simp_tac
-   (@{context} addsimps 
-  (List.map (easy_def @{context}) (getter_name :: lget_aa)))  1 \<close>)
-  apply(simp add:deref_d3_get_aa_def)
-  
-(*
-  apply(simp add:d3_get_aa'_def'[simplified 
-    d4_get_aa_bb'_def'
-    d5_get_aa_bb_part0'_def'
-    d6_get_aa_bb_part1'_def'
-     d8_get_aa_cc_part0'_def' 
-    d7_get_aa_cc'_def' 
- , simplified ]) *)
+  apply(simp add:deref_d3_get_aa_def d3_get_aa'_def')
   apply(simp add:L2opt aux1 )
   by monad_eq
   
 
-
-
-lemma d9_set_aa'_def_alt :
+lemma d9_set_aa'_def_alt[GetSetSimp] :
 "d9_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
         modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d9_set_aa (a ptr) v))) od )
 "        
-  apply(tactic \<open>  simp_tac
-   (@{context} addsimps 
-  (List.map (normal_def @{context}) (setter_name :: lset_aa)))  1 \<close>)
-
-  apply (simp add: deref_d9_set_aa_def)
-  apply(simp add:aux3)
-  by (monad_eq simp add: comp_def)  
+  apply (simp add: deref_d9_set_aa_def d9_set_aa'_def')
+  apply(simp add:L2opt aux1)
+  by (monad_eq simp add:comp_def)
   
 end
 
@@ -168,7 +124,8 @@ begin
 definition type_rel_t1_C_def[TypeRelSimp]: "\<And> typ. type_rel typ (_ :: t1_C itself) \<equiv> 
    (\<exists>aa. typ = RRecord [aa] \<and> type_rel aa TYPE(t2_C))"
 definition val_rel_t1_C_def[ValRelSimp]:
-    " val_rel uv (x :: t1_C) \<equiv> \<exists>aa. uv = URecord [aa] \<and> val_rel (fst aa) (deref_d3_get_aa x)"
+    " val_rel uv (x :: t1_C) \<equiv> \<exists>aa. uv = URecord [aa] \<and> val_rel (fst aa) 
+  (nested_unboxed_record_dargentisa.deref_d3_get_aa x)"
 instance ..
 end
 
@@ -275,7 +232,7 @@ lemma corres_member_t1_C_aa_writable[MemberReadOnly] :
                                             od)
   \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s 
 "
-  apply(simp add:d3_get_aa'_def_alt)
+ (* apply(simp add:d3_get_aa'_def_alt) *)
   by(tactic \<open>corres_take_boxed_tac @{context} 1\<close>)
 
 (* I changed the value relation of v' *)
@@ -300,9 +257,14 @@ corres state_rel (Put (Var x) 0 (Var v))
      gets (\<lambda>_. ptr)
   od)
  \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
-
-  apply( simp add:d9_set_aa'_def_alt bind_assoc)
+(*
+  apply(tactic \<open> simp_tac (@{context} addsimps (@{thms bind_assoc GetSetSimp})) 1\<close>)
+*)
+ (* apply (simp add:GetSetSimp)
+  apply(simp add:bind_assoc) *)
+  (* apply( simp add:d9_set_aa'_def_alt bind_assoc) *)
 by  (tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
+
 
 
 (* 

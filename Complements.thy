@@ -1,6 +1,8 @@
 
 theory Complements
   imports AutoCorres.AutoCorres
+"/home/laf027/cogent/branches/dargentisa/c-refinement/Tidy"
+"/home/laf027/cogent/branches/dargentisa/c-refinement/Specialised_Lemma_Utils"
 begin
 
 lemma gets_comp : "do x <- gets f ;
@@ -42,14 +44,7 @@ get_callgraph thy Cfile |> (fn g => rec_called_funs g fn_name)
 
 
 
-ML \<open>val suffix_def_easy = "'_def'"\<close>
-ML \<open>fun easy_def ctxt (name : string) : thm = 
-Proof_Context.get_thm ctxt (name ^ suffix_def_easy)
-\<close>
 
-ML \<open>fun normal_def ctxt (name : string) : thm = 
-Proof_Context.get_thm ctxt (name ^ "'_def")
-\<close>
 
 ML \<open>
 fun my_of ctxt vars = 
@@ -95,14 +90,15 @@ fun unify_goal_and_prove_eq ctxt sP sQ  =
 \<close>
 
 
+
+
 ML \<open>
 (* generate the isabelle getter term depending on w by inspecting the
  C getter definition.
-lget_aa is the list of constants to be unfolded in the
-getter_name definition
+get_def_thm is the unfolded defintion of the C_function
 *)
-fun generate_getter_term ctxt getter_name lget_aa heap_getter =
-easy_def ctxt getter_name
+fun generate_getter_term ctxt getter_name  heap_getter get_def_thm =
+get_def_thm
 |> 
 Rule_Insts.of_rule ctxt ([SOME "ptr"], []) [] |>
 my_simp ctxt
@@ -112,8 +108,7 @@ my_simp ctxt
    "\<And> (e :: lifted_globals \<Rightarrow> _). guard e = gets (\<lambda>_  . ())"
   |> Thm.cterm_of ctxt  |> Thm.assume)
   ] 
-  @ @{thms gets_return gets_comp } 
- @ (List.map (easy_def ctxt) lget_aa))
+  @ @{thms gets_return gets_comp }  )
 (* Here we should have a conclusion of the shape
 getter ptr = gets (\<lambda>s . f s)
 
@@ -126,7 +121,6 @@ getter ptr = gets (\<lambda>s . f s)
 |> Thm.concl_of 
 |> Utils.rhs_of_eq
 \<close>
-
 
 
 
@@ -151,8 +145,8 @@ lget_aa is the list of constants to be unfolded in the
 getter_name definition
 *)
 (*fun generate_setter_term ctxt setter_name lset_aa  =*)
-fun generate_setter_term ctxt setter_name lset_aa heap_setter =
-normal_def ctxt setter_name
+fun generate_setter_term ctxt setter_name heap_setter setter_thm  =
+setter_thm
 |> 
 Rule_Insts.of_rule ctxt ([SOME "ptr", SOME "v"], []) [] |>
 my_simp ctxt
@@ -165,7 +159,7 @@ my_simp ctxt
   @ @{thms modify_comp (* heap_t1_C_update_comp *) ptr_set_comp
 (* t1_C_updupd_same *)
  } 
- @ (List.map (normal_def ctxt) lset_aa))
+ )
 (* Here we should have a conclusion of the shape
 getter ptr = gets (\<lambda>s . f s)
 
@@ -188,6 +182,72 @@ fun my_generate_fun name vars term ctxt =
 (List.map (fn x => (x , Term.dummyT)) vars) ctxt of
    (_,_,ctxt) => ctxt 
  \<close>
+
+ML \<open>fun normal_def fn_C_name ctxt =
+  Proof_Context.get_thm ctxt (fn_C_name ^ "'_def")
+
+type callgraph = Symtab.key Binaryset.set Symtab.table;
+
+fun unfold_thm (g : callgraph) fn_name get_thm_def ctxt =
+   let  
+     val called_funs = rec_called_funs g fn_name 
+    (* generate nice definitions of C getters *)
+    val called_funs_def =  List.map (fn s => get_thm_def s ctxt) called_funs
+in
+   get_thm_def fn_name ctxt |> my_simp ctxt called_funs_def
+end
+
+\<close>
+
+
+ML \<open>
+
+fun generate_isa_get_or_set g fn_name args get_thm_def generator ctxt =
+let   
+    val isa_fn_name = "deref_" ^ fn_name
+    val simplified_thm_name = fn_name ^ "'_def'"
+    val _ = tracing ("generate_isa_get_or_set: generating " ^ isa_fn_name ^ " and " ^ simplified_thm_name)
+    val fn_def_thm = unfold_thm g fn_name get_thm_def ctxt
+    val term = generator fn_def_thm
+    val ctxt = Utils.define_lemma simplified_thm_name fn_def_thm ctxt |> snd
+in
+ my_generate_fun isa_fn_name args term ctxt : Proof.context
+end
+
+(* adds the definition of getter in the context and
+some unfoldings in the named_theorems getst_nm_thm *)
+fun generate_isa_get g heap_fn fn_name ctxt =
+generate_isa_get_or_set g fn_name ["w"] tidy_C_fun_def
+  (generate_getter_term ctxt fn_name heap_fn) ctxt
+
+fun generate_isa_set g heap_fn fn_name ctxt =
+generate_isa_get_or_set g fn_name ["w", "v"] normal_def
+  (generate_setter_term ctxt fn_name heap_fn) ctxt
+
+fun generate_isa_getset g heap_getter heap_setter  (* ty *)
+   ({ty = _ , getter = getter_name , setter = setter_name} : layout_field_info) 
+   ctxt = 
+  ctxt |>
+   generate_isa_get g heap_getter getter_name
+|> generate_isa_set g heap_setter setter_name ;
+
+fun generate_isa_getset_record g (heap_info : HeapLiftBase.heap_info) (ty, l) ctxt =
+  let
+    val _ = tracing ("generate_isa_getset_record: generating getter/setter for " ^ ty)
+    val heap_getter = ( Typtab.lookup (#heap_getters heap_info) 
+        (Syntax.read_typ ctxt ty)) |> the |> fst
+    val heap_setter = ( Typtab.lookup (#heap_setters heap_info) 
+        (Syntax.read_typ ctxt ty)) |> the |> fst
+  in
+  fold (generate_isa_getset g heap_getter heap_setter  ) l ctxt
+ end
+
+fun generate_isa_getset_records g heap_info uvals ctxt =
+   fold (generate_isa_getset_record g heap_info)
+   (uvals |> get_uval_custom_layout_records 
+ |> List.map (fn x => (get_ty_nm_C x, get_uval_custom_layout x)) |> rm_redundancy)
+  ctxt
+ \<close>   
 
 
 end

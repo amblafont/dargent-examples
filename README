@@ -8,7 +8,6 @@ Currently, the branch dargentisa succeeds on a simple example with layout
 (identity) and fails with a slightly more complicated one (onefield, taking
 the projection of a singleton record)
 
-
 --------------------------
 
 Snippset to insert in generated files *_CorresSetup.thy:
@@ -44,3 +43,6 @@ begin
   instance ..
 end
 
+--------------------------
+TODO: THe C compilation generates useless masks in the parts of the getters for custom layouts
+read_table is called multiple times in CorresSetup (whereas it could be read once and for all)

@@ -8,5 +8,7 @@ it is not in A normal form
 
 01/05 onefield_bits works with the dargentisa branch
 
-TODO: try nested records, and nested with # inside.
+TODO: try nested records, and nested with # inside (done: nested_unboxed_record.cogent)
 try with variants
+
+try with RECORDS with multiple fields
