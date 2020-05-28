@@ -12,3 +12,7 @@ TODO: try nested records, and nested with # inside (done: nested_unboxed_record.
 try with variants
 
 try with RECORDS with multiple fields
+
+28/05 onefield_bits and nested_field works with the automatic generation lemma (it remains to prove automatically the properties of get/set)
+But for nested_field, I need to reorder the lemmas for member: ReadOnly should appear first.
+TODO: test this order condition for other lemmas. In particular, what if Member Writable appears first?

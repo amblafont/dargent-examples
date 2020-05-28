@@ -33,14 +33,41 @@ qed
 ML \<open>
 
 type callgraph = Symtab.key Binaryset.set Symtab.table;
-
+(* TODO: use get_fun_info instead of c-parser callgraph *)
 fun get_callgraph thy Cfile : callgraph =
  CalculateState.get_csenv thy Cfile
-  |> the |> ProgramAnalysis.compute_callgraphs |> #callgraph
+  |> Utils.the' ("get_callgraph: C file " ^ Cfile ^ " not loaded") 
+|> ProgramAnalysis.compute_callgraphs |> #callgraph
+
+(* This would provide another way of getting the callgraph, through
+the #callees field *)
+(*
+fun get_fun_info Cfile Cfun ctxt : FunctionInfo.function_info =
+  Symtab.lookup (AutoCorresFunctionInfo.get (Proof_Context.theory_of ctxt))
+    Cfile |> Utils.the' ("get_fun_info: C file " ^ Cfile ^ " not loaded")
+  |> (fn x => FunctionInfo.Phasetab.lookup x FunctionInfo.TS) |> the
+  |> (fn x => Symtab.lookup x Cfun ) 
+|> Utils.the' ("get_fun_info: unknown C function " ^ Cfun)
+*)
+
+
+(* returns the isabelle type corresponding to a C function
+too easy using get_fun_info
+*)
+(*
+fun get_ret_typ thy Cfile fn_name : typ =
+   CalculateState.get_csenv thy Cfile |> 
+Utils.the' ("get_ret_typ: C file " ^ Cfile ^ " not loaded")
+|> ProgramAnalysis.get_rettype fn_name
+|> Utils.the' ("get_ret_typ: unknown C function " ^ fn_name)
+|> (fn x => CalculateState.ctype_to_typ (thy, x))
+*)
 
 
 (* returns the list of called functions in the body of
  fn_name *)
+(* could also used FunctionInfo.callees in AutoCorres instead
+of the callgraph *)
 fun called_funs (g : callgraph) (fn_name : string) =
     case Symtab.lookup g fn_name of
    SOME t => Binaryset.listItems t
@@ -242,7 +269,7 @@ generate_isa_get_or_set g fn_name ["w", "v"] fn_C_def_thm
   (generate_setter_term ctxt fn_name heap_fn) ctxt
 
 fun generate_isa_getset g heap_getter heap_setter  (* ty *)
-   ({ty = _ , getter = getter_name , setter = setter_name} : layout_field_info) 
+   ({(* ty = _ , *) getter = getter_name , setter = setter_name} : layout_field_info) 
    ctxt = 
   ctxt |>
    generate_isa_get g heap_getter getter_name
