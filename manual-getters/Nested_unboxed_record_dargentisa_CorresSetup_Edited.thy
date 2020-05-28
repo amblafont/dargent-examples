@@ -177,17 +177,7 @@ lemmas type_rel_simps[TypeRelSimp] =
 
 
 
-(* Generating the specialised take and put lemmas *)
 local_setup \<open> local_setup_take_put_member_case_esac_specialised_lemmas "nested_unboxed_record_dargentisa.c" \<close>
-
-(* Non-generated *)
-
-(* strane ! ! what happens without dargent ? *)
-lemmas avant = MemberReadOnly(2)
-declare avant[MemberReadOnly]
-
-(* End of non-generated *)
-
 local_setup \<open> fold tidy_C_fun_def' Cogent_functions \<close>
 
 end (* of locale *)
