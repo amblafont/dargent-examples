@@ -29,6 +29,18 @@ have "\<forall>fa. ((\<lambda>fa. fa(ptr := f (fa ptr))) \<circ> (\<lambda>f. f(
     by blast
 qed
 
+(* Lemmas for variants (that involves conditions) *)
+lemma condition_cst : " condition (\<lambda> _. b) u v = (if b then u else v)"
+  by simp
+  
+lemma modify_if : "(if b then modify f else modify g) = 
+  modify (\<lambda> x. if b then f x else g x)"
+  by simp
+
+lemma ptr_set_if :
+   "(if b then x(ptr := t) else x(ptr := u)) = 
+    x(ptr := if b then t else u)"
+  by simp
 
 ML \<open>
 
@@ -139,7 +151,10 @@ fun unify_change_goal_eq ctxt sP sQ  =
     ("\<lambda> f.  undefined = " ^ sQ ^ " f") 
 \<close>
 
-
+ML \<open>
+fun print_thm ctxt thm =
+  Thm.prop_of thm |> Syntax.string_of_term ctxt |> tracing
+\<close>
 
 
 ML \<open>
@@ -148,9 +163,9 @@ ML \<open>
 be totally unfolded)
 heap_getter: the name of the heap getter, e.g. heap_t1_C
 *)
-fun generate_getter_term ctxt getter_name  heap_getter get_def_thm =
+fun generate_getter_term ctxt getter_name heap_getter get_def_thm =
 get_def_thm
-|> 
+|>
 Rule_Insts.of_rule ctxt ([SOME "ptr"], []) [] |>
 thm_simp ctxt
 ([
@@ -159,7 +174,11 @@ thm_simp ctxt
    "\<And> (e :: lifted_globals \<Rightarrow> _). guard e = gets (\<lambda>_  . ())"
   |> Thm.cterm_of ctxt  |> Thm.assume)
   ] 
-  @ @{thms gets_return gets_comp }  )
+  @ @{thms gets_return gets_comp NonDetMonadEx.condition_gets }  )
+|> thm_simp 
+(* rewrite in the then and else statements *)
+(Simplifier.add_cong @{thm if_cong} ctxt)
+ @{thms comp_def }
 (* Here we should have a conclusion of the shape
 getter ptr = gets (\<lambda>s . f s)
 *)
@@ -195,6 +214,11 @@ thm_simp ctxt
   @ @{thms modify_comp ptr_set_comp
  } 
  )
+(* This tackles conditions (if variants) *) 
+|> thm_simp
+ (* rewrite in the then and else statements *)
+ (Simplifier.add_cong @{thm if_cong} ctxt)
+ @{thms comp_def condition_cst modify_if ptr_set_if}
 |> thm_THEN @{thm  HOL.meta_eq_to_obj_eq}
 |> unify_change_goal_eq ctxt 
 ("(\<lambda> f. " ^ setter_name ^ 
