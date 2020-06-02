@@ -84,6 +84,13 @@ lemma get_set_a[GetSetSimp] : "deref_d3_get_a (deref_d27_set_a b v) = v"
 lemma get_set_b[GetSetSimp] : "deref_d9_get_b (deref_d32_set_b b v) = v"
   sorry
 
+lemma get_a_set_b[GetSetSimp] : "deref_d3_get_a (deref_d32_set_b b v) = deref_d3_get_a b"
+  sorry
+
+lemma get_b_set_a[GetSetSimp] : "deref_d9_get_b (deref_d27_set_a b v) = deref_d9_get_b b"
+  sorry
+
+
 lemma d3_get_a_def_alt[GetSetSimp] : "d3_get_a' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
                                          gets (\<lambda>s. deref_d3_get_a (heap_t1_C s x')) 
                                       od"

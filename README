@@ -46,3 +46,6 @@ end
 --------------------------
 TODO: THe C compilation generates useless masks in the parts of the getters for custom layouts
 read_table is called multiple times in CorresSetup (whereas it could be read once and for all)
+
+TODO: check examples with different layouts for the same record (I fear a clash in the table file, as the layout is always undefined)
+TODO: make Complements take statements about heap_update as arguments
