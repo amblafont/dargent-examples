@@ -293,7 +293,7 @@ generate_isa_get_or_set g fn_name ["w", "v"] fn_C_def_thm
   (generate_setter_term ctxt fn_name heap_fn) ctxt
 
 fun generate_isa_getset g heap_getter heap_setter  (* ty *)
-   ({(* ty = _ , *) getter = getter_name , setter = setter_name} : layout_field_info) 
+   ({ name = _ ,  getter = getter_name , setter = setter_name} : layout_field_info) 
    ctxt = 
   ctxt |>
    generate_isa_get g heap_getter getter_name
