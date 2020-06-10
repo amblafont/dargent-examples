@@ -116,7 +116,7 @@ definition t1_C_to_uval :: "t1_C \<Rightarrow> (_,_,_) uval"
 instantiation t1_C :: cogent_C_val
 begin
 definition type_rel_t1_C_def[TypeRelSimp]: "\<And> typ. type_rel typ (_ :: t1_C itself) \<equiv> (typ = RRecord [t1_C_aa_type ])"
-definition val_rel_t1_C_def[ValRelSimp]:
+definition val_rel_t1_C_def[GetSetSimp]:
     " val_rel uv (x :: t1_C) \<equiv> uv = t1_C_to_uval x "
 instance ..
 end

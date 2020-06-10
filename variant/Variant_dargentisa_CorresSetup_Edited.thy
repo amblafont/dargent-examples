@@ -73,45 +73,7 @@ context variant_dargentisa begin
 (* Tidy the definitions of getters *)
 local_setup \<open>generate_isa_getset_records g heap_info uvals  \<close>
 
-lemma get_set_a[GetSetSimp] : "deref_d3_get_a (deref_d27_set_a b v) = v"
-  apply(simp add:deref_d3_get_a_def deref_d27_set_a_def)
-  apply(cases v)
-  apply simp
-(* by word_bitwise *)
-  sorry
-  
 
-lemma get_set_b[GetSetSimp] : "deref_d9_get_b (deref_d32_set_b b v) = v"
-  sorry
-
-lemma get_a_set_b[GetSetSimp] : "deref_d3_get_a (deref_d32_set_b b v) = deref_d3_get_a b"
-  sorry
-
-lemma get_b_set_a[GetSetSimp] : "deref_d9_get_b (deref_d27_set_a b v) = deref_d9_get_b b"
-  sorry
-
-
-lemma d3_get_a_def_alt[GetSetSimp] : "d3_get_a' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
-                                         gets (\<lambda>s. deref_d3_get_a (heap_t1_C s x')) 
-                                      od"
-  sorry
-
-lemma d9_get_b_def_alt[GetSetSimp] : "d9_get_b' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
-                                         gets (\<lambda>s. deref_d9_get_b (heap_t1_C s x')) 
-                                      od"
-  sorry
-
-lemma d27_set_a'_def_alt[GetSetSimp] :
-"d27_set_a' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
-        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d27_set_a (a ptr) v))) od )
-"    
-  sorry
-
-lemma d32_set_b'_def_alt[GetSetSimp] :
-"d32_set_b' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
-        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d32_set_b (a ptr) v))) od )
-"        
-  sorry
 end
 (* For the type/value relation *)
 
@@ -119,16 +81,252 @@ end
 (* We need the typeclass instances cogent_C_val for t2 *)
 local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets_for_types "variant_dargentisa.c" 
   ["t2_C", "t8_C"]\<close> 
+
+
 (* obtained from the version without layout *)
 instantiation t1_C :: cogent_C_val
 begin
 definition type_rel_t1_C_def[TypeRelSimp]: "\<And> typ. type_rel typ (_ :: t1_C itself) \<equiv> 
    \<exists>a b. typ = RRecord [a, b] \<and> type_rel a TYPE(t2_C) \<and> type_rel b TYPE(t8_C)"
-definition val_rel_t1_C_def[ValRelSimp]:
+definition val_rel_t1_C_def[GetSetSimp]:
     " val_rel uv (x :: t1_C) \<equiv> 
      \<exists>a b. uv = URecord [a, b] \<and> val_rel (fst a) 
 (variant_dargentisa.deref_d3_get_a x) \<and> val_rel (fst b) (variant_dargentisa.deref_d9_get_b x)"
 instance ..
+end
+
+(* This must be defined after value relations, which appear in the hypotheses *)
+context variant_dargentisa begin
+
+
+
+lemma get_set_a' : 
+(* The value relation is only there to ensure that the tag
+is the right one *)
+  "val_rel x v \<Longrightarrow> deref_d3_get_a (deref_d27_set_a b v) = v"
+  apply(simp add:deref_d3_get_a_def deref_d27_set_a_def)
+  apply(cases v)
+  apply simp
+  apply(rule conjI)
+   apply (simp add:ValRelSimp)
+   apply blast   
+  by (word_bitwise)
+
+lemma get_set_a [GetSetSimp] : 
+(* The value relation is only there to ensure that the tag
+is the right one *)
+  "val_rel x v \<Longrightarrow> val_rel x (deref_d3_get_a (deref_d27_set_a b v))"
+  apply(simp add:get_set_a')
+  done
+
+
+
+lemma aux : "(UCAST(32 \<rightarrow> 8)
+          ((data_C b.[4] && 0xFF00FFFF ||
+            (0xFF && UCAST(8 \<rightarrow> 32)  x6 && 0xFF << 16) >>
+            16) &&
+           0xFF) = x6)"
+  by word_bitwise
+
+lemma get_set_b[GetSetSimp]  : "val_rel x v \<Longrightarrow> val_rel x (deref_d9_get_b (deref_d32_set_b b v))"
+  apply(simp add:deref_d9_get_b_def deref_d32_set_b_def
+)
+
+  apply (simp add: ValRelSimp)
+  apply (elim exE )
+(*  this removes a lot of impossible cases  *)
+  apply (simp add:TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def )
+  
+  apply(cases v)
+
+  apply (rule conjI impI)+
+     apply(clarsimp)
+    apply(clarsimp)
+    apply(rule_tac P="val_rel uval" and a=x3  in back_subst )
+     apply assumption
+    apply word_bitwise
+   apply clarsimp
+   apply word_bitwise
+
+  apply (rule conjI impI)+
+     apply(clarsimp)
+     apply word_bitwise
+
+    apply(clarsimp)  
+    apply(rule FalseE)
+    apply word_bitwise
+   apply clarsimp
+   apply (rule conjI impI)+
+    apply(rule_tac P="val_rel uval" and a=x4 in back_subst )
+     apply assumption
+    apply word_bitwise
+   apply word_bitwise
+
+  apply (rule conjI impI)+
+
+     apply clarsimp
+     apply word_bitwise
+    apply clarsimp
+    apply(rule FalseE)
+    apply word_bitwise
+   apply clarsimp
+   apply (rule conjI impI)+
+    apply word_bitwise
+   apply (rule conjI impI)+
+    apply(rule_tac P="val_rel uval" and a=x5 in back_subst )
+     apply assumption
+    apply word_bitwise
+   apply (word_bitwise)
+
+  apply (rule conjI impI)+
+     apply clarsimp
+     apply word_bitwise
+    apply clarsimp
+    apply(rule FalseE)
+    apply word_bitwise
+   apply clarsimp
+   apply (rule conjI impI)+
+    apply word_bitwise
+   apply (rule conjI impI)+
+    apply word_bitwise
+   apply (rule conjI impI)+
+    apply(rule_tac P="val_rel uval" and a=x6 in back_subst )
+     apply assumption    
+    apply (simp  add:aux)
+   apply word_bitwise
+
+  apply (rule conjI impI)+
+    apply clarsimp
+    apply word_bitwise
+   apply clarsimp
+   apply(rule FalseE)
+   apply word_bitwise
+
+  apply (rule conjI impI)+
+    apply clarsimp
+    apply word_bitwise
+   apply clarsimp
+   apply(rule FalseE)
+   apply word_bitwise
+
+  apply (rule conjI impI)+
+    apply clarsimp
+    apply word_bitwise
+   apply clarsimp
+   apply(rule FalseE)
+   apply word_bitwise
+
+  apply clarsimp
+  apply (rule conjI impI)+
+    
+   apply word_bitwise
+  apply (rule conjI impI)+
+
+  apply(rule_tac P="val_rel uval" and a=x2 in back_subst )
+   apply assumption
+  apply word_bitwise
+  done
+
+
+
+
+
+lemma aux': "UCAST(32 \<rightarrow> 8) ((x && 0xFF00FFFF || 0x20000 >> 8) && 0xFF) =
+    UCAST(32 \<rightarrow> 8) ((x >> 8) && 0xFF)"
+  by word_bitwise
+
+lemma stupid : "P \<Longrightarrow> (Q \<longrightarrow> P)"
+  by fast
+
+(* Is it enough, or would I need some weakening of this proposition, like above, introducing
+some val_rel ? *)
+lemma get_a_set_b[GetSetSimp] : "deref_d3_get_a (deref_d32_set_b b v) = deref_d3_get_a b"
+  apply(simp add:deref_d3_get_a_def deref_d32_set_b_def
+)
+(* This removes contradictory cases, such as TAG_ENUM_B = TAG_ENUM_C *)
+  apply (simp add:TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def )
+  apply (rule conjI impI)+  
+(* why doesn't it work ? *)
+   apply (word_bitwise)
+   apply (simp add:aux')
+
+  apply (rule stupid conjI)+
+   apply word_bitwise
+  apply (rule stupid conjI)+
+   apply word_bitwise
+  apply (rule stupid conjI)+
+   apply word_bitwise
+  apply (rule stupid conjI)+
+  apply word_bitwise
+  done
+
+lemma get_b_set_a[GetSetSimp] : "deref_d9_get_b (deref_d27_set_a b v) = deref_d9_get_b b"
+apply(simp add:deref_d9_get_b_def deref_d27_set_a_def)
+(* This removes contradictory cases, such as TAG_ENUM_B = TAG_ENUM_C *)
+  apply (simp add:TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def )
+
+
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  apply (rule conjI impI)+
+   apply word_bitwise
+  done
+
+
+
+lemma d3_get_a_def_alt[GetSetSimp] : "d3_get_a' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d3_get_a (heap_t1_C s x')) 
+                                      od"
+  apply(simp add:deref_d3_get_a_def d3_get_a'_def')
+  apply(simp add:L2opt unat_ucast_32_8)
+
+  by monad_eq
+
+
+lemma d9_get_b_def_alt[GetSetSimp] : "d9_get_b' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
+                                         gets (\<lambda>s. deref_d9_get_b (heap_t1_C s x')) 
+                                      od"
+  apply(simp add:deref_d9_get_b_def d9_get_b'_def')
+  apply(simp add:L2opt unat_ucast_32_8 unat_ucast_32_16 condition_cst)
+  
+  apply monad_eq
+  done
+
+lemma d27_set_a'_def_alt[GetSetSimp] :
+"d27_set_a' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d27_set_a (a ptr) v))) od )
+"    
+  apply(simp add:d27_set_a'_def' deref_d27_set_a_def)
+  apply(simp add:L2opt)  
+  apply monad_eq
+  apply(simp add:comp_def)
+  done
+
+lemma d32_set_b'_def_alt[GetSetSimp] :
+"d32_set_b' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
+        modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d32_set_b (a ptr) v))) od )
+"        
+   apply(simp add:d32_set_b'_def' deref_d32_set_b_def)
+  apply(simp add:L2opt condition_cst)  
+  apply monad_eq
+  apply(simp add:comp_def)
+  done
 end
 
 

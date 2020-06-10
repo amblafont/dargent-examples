@@ -5,6 +5,18 @@ theory Complements
 "/home/laf027/cogent/branches/dargentisa/c-refinement/Specialised_Lemma_Utils"
 begin
 
+(* Why is it necessary to prove this lemma *)
+lemma unat_ucast_32_8 : "unat ( (UCAST(32 \<rightarrow> 8) x))
+         <  2147483648"
+  apply(unat_arith)
+  apply (simp add: unat_ucast_up_simp)
+  done
+
+lemma unat_ucast_32_16 : "unat (UCAST(32 \<rightarrow> 16) x) < 2147483648"
+  apply(unat_arith)
+  apply (simp add: unat_ucast_up_simp)
+  done
+
 lemma gets_comp : "do x <- gets f ;
                      gets (f' x) od
                      =

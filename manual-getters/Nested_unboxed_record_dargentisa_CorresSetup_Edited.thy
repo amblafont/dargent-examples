@@ -85,29 +85,29 @@ lemma get_set_aa[GetSetSimp] : "deref_d3_get_aa (deref_d9_set_aa b v) = v"
 (* Getter/Setter relate to their C counterparts *)
 
 
-(* !! How to make this proof shorter *)
-lemma aux1 : "unat ( (UCAST(32 \<rightarrow> 8) x))
-         <  2147483648"
-  apply(unat_arith)
-  apply (simp add: unat_ucast_up_simp)
-  done
 
 
+(* this lemma is not necessary to prove the
+correspondence lemma (probably because the cogent
+program is too simple) *)
 lemma d3_get_aa'_def_alt[GetSetSimp] : "d3_get_aa' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
                                          gets (\<lambda>s. deref_d3_get_aa (heap_t1_C s x')) 
                                       od"
 
   apply(simp add:deref_d3_get_aa_def d3_get_aa'_def')
-  apply(simp add:L2opt aux1 )
+(* why do I need unat_ucast_smaller *)
+  apply(simp add:L2opt unat_ucast_32_8 )
   by monad_eq
   
-
+(* this lemma is not necessary to prove the
+correspondence lemma (probably because the cogent
+program is too simple) *)
 lemma d9_set_aa'_def_alt[GetSetSimp] :
 "d9_set_aa' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
         modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d9_set_aa (a ptr) v))) od )
 "        
   apply (simp add: deref_d9_set_aa_def d9_set_aa'_def')
-  apply(simp add:L2opt aux1)
+  apply(simp add:L2opt )
   by (monad_eq simp add:comp_def)
   
 end
@@ -123,7 +123,7 @@ instantiation t1_C :: cogent_C_val
 begin
 definition type_rel_t1_C_def[TypeRelSimp]: "\<And> typ. type_rel typ (_ :: t1_C itself) \<equiv> 
    (\<exists>aa. typ = RRecord [aa] \<and> type_rel aa TYPE(t2_C))"
-definition val_rel_t1_C_def[ValRelSimp]:
+definition val_rel_t1_C_def[GetSetSimp]:
     " val_rel uv (x :: t1_C) \<equiv> \<exists>aa. uv = URecord [aa] \<and> val_rel (fst aa) 
   (nested_unboxed_record_dargentisa.deref_d3_get_aa x)"
 instance ..
