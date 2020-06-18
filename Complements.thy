@@ -1,8 +1,9 @@
 
 theory Complements
   imports AutoCorres.AutoCorres
-"/home/laf027/cogent/branches/dargentisa/c-refinement/Tidy"
-"/home/laf027/cogent/branches/dargentisa/c-refinement/Specialised_Lemma_Utils"
+"CogentCRefinement.Tidy"
+"CogentCRefinement.Specialised_Lemma_Utils"
+"CogentCRefinement.Read_Table"
 begin
 
 (* Why is it necessary to prove this lemma *)
@@ -333,6 +334,41 @@ fun generate_isa_getset_records g heap_info uvals ctxt =
    (uvals |> get_uval_custom_layout_records 
  |> List.map (fn x => (get_ty_nm_C x, get_uval_custom_layout x)) |> rm_redundancy)
   ctxt
+
+(* 
+This ML function generate custom getters/setters in Isabelle from
+the C custom getters/setters.
+
+More precisely, the involved steps are:
+1. get the names of custom C getters/setters from the table file
+2. prove a simplified definition of them by unfolding the auxiliary 
+   called C functions and using Tidy lemmas (thus produces Cgetter_def' 
+   lemmas in the context). 
+3. infer an isabelle definition of custom getter/setters by inspecting
+   these simplified definition (and performing further simplification, such
+   as removing all guards)
+
+The simplified definitions are thought to be used later when proving that
+the C and isabelle custom getters/setters match.
+
+ *)
+fun generate_isa_getset_records_for_file filename ctxt =
+  let
+    val thy = Proof_Context.theory_of ctxt
+(* 
+get the call graph and the heap info
+*)
+
+    val uvals = read_table filename thy
+    val g = get_callgraph thy filename : callgraph
+    val heap_info = (Symtab.lookup (HeapInfo.get thy) 
+    filename |> the  |> #heap_info)
+  in
+    fold (generate_isa_getset_record g heap_info)
+    (uvals |> get_uval_custom_layout_records 
+   |> List.map (fn x => (get_ty_nm_C x, get_uval_custom_layout x)) |> rm_redundancy)
+    ctxt
+  end
  \<close>   
 
 
