@@ -292,7 +292,7 @@ let
     val term = generator fn_def_thm
     val ctxt = Utils.define_lemma simplified_thm_name fn_def_thm ctxt |> snd
 in
- define_function isa_fn_name args term ctxt : Proof.context
+ (isa_fn_name, define_function isa_fn_name args term ctxt : Proof.context)
 end
 
 (* heap_fn : the name of the heap getter, e.g. heap_t1_C *)
@@ -306,11 +306,16 @@ generate_isa_get_or_set g fn_name ["w", "v"] fn_C_def_thm
   (generate_setter_term ctxt fn_name heap_fn) ctxt
 
 fun generate_isa_getset g heap_getter heap_setter  (* ty *)
-   ({ name = _ ,  getter = getter_name , setter = setter_name} : layout_field_info) 
+   (l : table_field_layout) 
    ctxt = 
-  ctxt |>
-   generate_isa_get g heap_getter getter_name
-|> generate_isa_set g heap_setter setter_name ;
+ let
+   val (isa_getter_name, ctxt) = generate_isa_get g heap_getter (# getter l) ctxt
+   val (_, ctxt) = generate_isa_set g heap_setter (# setter l) ctxt
+ in
+   ((# getter l , isa_getter_name), ctxt)
+ end
+
+
 
 (* generate the isabelle setter/getters and simplified definitions of the C getter/setter
 for a given record type ty with specified C getter/setters in l
@@ -322,19 +327,38 @@ fun generate_isa_getset_record g (heap_info : HeapLiftBase.heap_info) (ty, l) ct
         (Syntax.read_typ ctxt ty)) |> the |> fst
     val heap_setter = ( Typtab.lookup (#heap_setters heap_info) 
         (Syntax.read_typ ctxt ty)) |> the |> fst
+    val (lays, ctxt) =   fold_map 
+   (generate_isa_getset g heap_getter heap_setter)
+     l ctxt
   in
-  fold (generate_isa_getset g heap_getter heap_setter  ) l ctxt
+    (lays, ctxt)
  end
 
 (* generate isabelle setter/getters and simplified definition of C getter/setters
 induced by a list of uvals (typically read from a table file).
 *)
 fun generate_isa_getset_records g heap_info uvals ctxt =
-   fold (generate_isa_getset_record g heap_info)
-   (uvals |> get_uval_custom_layout_records 
- |> List.map (fn x => (get_ty_nm_C x, get_uval_custom_layout x)) |> rm_redundancy)
-  ctxt
+  let
+    val (getsetl, ctxt) = 
+     fold_map (generate_isa_getset_record g heap_info)
+     (uvals |> get_uval_custom_layout_records 
+   |> List.map (fn x => (get_ty_nm_C x, get_uval_custom_layout x)) |> rm_redundancy)
+    ctxt
+    val getsetMap = getsetl |> List.concat |> Symtab.make
+      |> Symtab.map (fn _ => Syntax.read_term ctxt)
+    fun make_uval (uval : table_field_layout uval) : field_layout uval =
+       uval_map 
+        (fn info => make_field_layout info 
+         (Symtab.lookup getsetMap (# getter info) |> the))
+       uval
+    val uvals = List.map make_uval uvals
+  in
+    (uvals, ctxt)
+  end
 
+
+
+ \<close>   
 (* 
 This ML function generate custom getters/setters in Isabelle from
 the C custom getters/setters.
@@ -347,29 +371,26 @@ More precisely, the involved steps are:
 3. infer an isabelle definition of custom getter/setters by inspecting
    these simplified definition (and performing further simplification, such
    as removing all guards)
+4. Put a uvals in a Theory Data so we don't need to read the table file again later.
 
 The simplified definitions are thought to be used later when proving that
 the C and isabelle custom getters/setters match.
 
  *)
-fun generate_isa_getset_records_for_file filename ctxt =
+ML \<open>
+(* The additionnal parameter locale could certainly be removed *)
+fun generate_isa_getset_records_for_file filename locale thy =
   let
-    val thy = Proof_Context.theory_of ctxt
-(* 
-get the call graph and the heap info
-*)
-
     val uvals = read_table filename thy
     val g = get_callgraph thy filename : callgraph
     val heap_info = (Symtab.lookup (HeapInfo.get thy) 
-    filename |> the  |> #heap_info)
+     filename |> the  |> #heap_info)
+    val ctxt = Named_Target.init locale thy
+    val (uvals, ctxt) = generate_isa_getset_records g heap_info uvals ctxt
+    val thy = Named_Target.exit ctxt
   in
-    fold (generate_isa_getset_record g heap_info)
-    (uvals |> get_uval_custom_layout_records 
-   |> List.map (fn x => (get_ty_nm_C x, get_uval_custom_layout x)) |> rm_redundancy)
-    ctxt
+    UVals.map (Symtab.update (filename, uvals)) thy
   end
  \<close>   
-
 
 end
