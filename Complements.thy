@@ -1,10 +1,32 @@
+(*
 
+This file deals with custom getters and setters in case of custom layouts.
+It also register uvals read from the table file in the theory.
+
+The two main functions are
+- generate_isa_getset_records_for_file: generates a direct and non monadic definition of custom
+getters and setters by inspecting the C (monadic) definition
+
+- local_setup_getset_lemmas which generates the get/set lemmas and prove them (similarly
+to local_setup_take_put_member_case_esac_specialised_lemmas)
+
+To show the get/set lemmas that ought to be proven, use the following snippset:
+ML \<open> val lems = mk_getset_lems "variant_dargentisa.c" @{context} \<close>
+ML \<open>lems  |> map (string_of_getset_lem @{context})|> map tracing\<close>
+
+These get/set lemmas should be proven before the Take, Put, .. lemmas.
+
+
+*)
 theory Complements
   imports AutoCorres.AutoCorres
 "CogentCRefinement.Tidy"
 "CogentCRefinement.Specialised_Lemma_Utils"
 "CogentCRefinement.Read_Table"
+"CogentCRefinement.Value_Relation"
 begin
+
+
 
 (* Why is it necessary to prove this lemma *)
 lemma unat_ucast_32_8 : "unat ( (UCAST(32 \<rightarrow> 8) x))
@@ -17,6 +39,10 @@ lemma unat_ucast_32_16 : "unat (UCAST(32 \<rightarrow> 16) x) < 2147483648"
   apply(unat_arith)
   apply (simp add: unat_ucast_up_simp)
   done
+
+(* These lemmas help simplifying the monadic custom C getters and setters, that are inspected
+to devise a corresponding direct (non monadic) definition.
+ *)
 
 lemma gets_comp : "do x <- gets f ;
                      gets (f' x) od
@@ -56,37 +82,15 @@ lemma ptr_set_if :
   by simp
 
 ML \<open>
-
+(* The callgraph is used to unfold any auxiliary function in the monadic definition of 
+C getter/setter
+*)
 type callgraph = Symtab.key Binaryset.set Symtab.table;
 (* TODO: use get_fun_info instead of c-parser callgraph *)
 fun get_callgraph thy Cfile : callgraph =
  CalculateState.get_csenv thy Cfile
   |> Utils.the' ("get_callgraph: C file " ^ Cfile ^ " not loaded") 
 |> ProgramAnalysis.compute_callgraphs |> #callgraph
-
-(* This would provide another way of getting the callgraph, through
-the #callees field *)
-(*
-fun get_fun_info Cfile Cfun ctxt : FunctionInfo.function_info =
-  Symtab.lookup (AutoCorresFunctionInfo.get (Proof_Context.theory_of ctxt))
-    Cfile |> Utils.the' ("get_fun_info: C file " ^ Cfile ^ " not loaded")
-  |> (fn x => FunctionInfo.Phasetab.lookup x FunctionInfo.TS) |> the
-  |> (fn x => Symtab.lookup x Cfun ) 
-|> Utils.the' ("get_fun_info: unknown C function " ^ Cfun)
-*)
-
-
-(* returns the isabelle type corresponding to a C function
-too easy using get_fun_info
-*)
-(*
-fun get_ret_typ thy Cfile fn_name : typ =
-   CalculateState.get_csenv thy Cfile |> 
-Utils.the' ("get_ret_typ: C file " ^ Cfile ^ " not loaded")
-|> ProgramAnalysis.get_rettype fn_name
-|> Utils.the' ("get_ret_typ: unknown C function " ^ fn_name)
-|> (fn x => CalculateState.ctype_to_typ (thy, x))
-*)
 
 
 (* returns the list of called functions in the body of
@@ -137,6 +141,8 @@ fun thm_OF thm1 thms =
 thm1 OF thms ;
 \<close>
 
+(* The purpose of this lemma is to unify a goal. More precisely, we provide P and Q and let isabelle
+infer f *)
 lemma unify_goal_auxiliary : "\<And> P Q f. P f \<Longrightarrow> Q f \<Longrightarrow> Q f"
   by simp
 
@@ -164,10 +170,6 @@ fun unify_change_goal_eq ctxt sP sQ  =
     ("\<lambda> f.  undefined = " ^ sQ ^ " f") 
 \<close>
 
-ML \<open>
-fun print_thm ctxt thm =
-  Thm.prop_of thm |> Syntax.string_of_term ctxt |> tracing
-\<close>
 
 
 ML \<open>
@@ -310,9 +312,9 @@ fun generate_isa_getset g heap_getter heap_setter  (* ty *)
    ctxt = 
  let
    val (isa_getter_name, ctxt) = generate_isa_get g heap_getter (# getter l) ctxt
-   val (_, ctxt) = generate_isa_set g heap_setter (# setter l) ctxt
+   val (isa_setter_name, ctxt) = generate_isa_set g heap_setter (# setter l) ctxt
  in
-   ((# getter l , isa_getter_name), ctxt)
+   (((# getter l , isa_getter_name), (#setter l, isa_setter_name)), ctxt)
  end
 
 
@@ -344,12 +346,19 @@ fun generate_isa_getset_records g heap_info uvals ctxt =
      (uvals |> get_uval_custom_layout_records 
    |> List.map (fn x => (get_ty_nm_C x, get_uval_custom_layout x)) |> rm_redundancy)
     ctxt
-    val getsetMap = getsetl |> List.concat |> Symtab.make
+    val getsetMap = getsetl |> List.concat |>
+       ListPair.unzip |> List.revAppend |>
+      Symtab.make
       |> Symtab.map (fn _ => Syntax.read_term ctxt)
+    val _ = tracing (@{make_string} getsetMap)
     fun make_uval (uval : table_field_layout uval) : field_layout uval =
        uval_map 
         (fn info => make_field_layout info 
-         (Symtab.lookup getsetMap (# getter info) |> the))
+      {
+        isa_getter = (Symtab.lookup getsetMap (# getter info) |> Utils.the' "getter not found"),
+        isa_setter = (Symtab.lookup getsetMap (# setter info) |> Utils.the' "setter not found")
+     }
+  )
        uval
     val uvals = List.map make_uval uvals
   in
@@ -358,7 +367,8 @@ fun generate_isa_getset_records g heap_info uvals ctxt =
 
 
 
- \<close>   
+ \<close>
+
 (* 
 This ML function generate custom getters/setters in Isabelle from
 the C custom getters/setters.
@@ -391,6 +401,291 @@ fun generate_isa_getset_records_for_file filename locale thy =
   in
     UVals.map (Symtab.update (filename, uvals)) thy
   end
- \<close>   
+ \<close> 
+
+(*
+
+
+Now, the mk_lems generation for getset
+
+
+*)               
+ML \<open>fn x => x : lem\<close>
+ML \<open>
+(* 1. `get o set = id`
+2. `get_a o set_b = get_a`
+3. `C_get = isabelle_get`
+4. `C_set = isabelle_set`
+
+more exactly, the first one is rather
+
+1. `val_rel x new_val \<Longrightarrow> val_rel x (get (set t new_val))`
+
+because get o set = id is too strict, as it does not hold for variants: if a field is a variant,
+then the associated getter erases the irrelevant fields. Thus equality is too strong,
+but we can replace them with value relation preservation
+ *)
+datatype getSetLemType = 
+  GetSet | GetASetB | GetDef | SetDef
+
+(* adapted from the lem type *)
+type getset_lem = { prop : term, typ : getSetLemType, name : string, mk_tactic: Proof.context -> tactic} 
+val cheat_tactic : Proof.context -> tactic = fn context => Skip_Proof.cheat_tac context 1
+
+fun string_of_getset_lem ctxt (lem : getset_lem) =
+  "lemma " ^ # name lem ^ "[GetSetSimp] : \"" ^
+   Syntax.string_of_term ctxt (# prop lem) ^ "\""
+  ^ "\n  sorry"
+
+\<close>
+
+
+
+ML \<open>
+fun make_getset_prop_gen prms cncl ctxt : term =
+  let
+   val clean = HOLogic.mk_Trueprop o strip_atype
+   val term = mk_meta_imps 
+      (map clean prms) 
+      (clean cncl) ctxt |> Syntax.check_term ctxt;
+  in
+     term
+  end
+\<close>
+
+
+
+ML \<open>
+fun mk_getset_prop (info : field_layout) ctxt : term =  
+  let
+   val prms = [ 
+   @{term "val_rel x v"} 
+]
+   val cncl = @{term "\<lambda> getter setter. val_rel x (getter (setter b v))"}
+         $ (# isa_getter info) $ (# isa_setter info)   
+  in
+     make_getset_prop_gen prms cncl ctxt
+  end
+\<close>
+
+ML \<open>
+fun mk_getdef_prop heap_getter is_valid_struct     
+  (info : field_layout) ctxt : term =  
+  let
+   
+   
+   val field_getter    = #getter info ^ "'" |> Syntax.read_term ctxt;
+
+
+   val cncl =
+       @{term "\<lambda> isa_getter C_getter is_valid heap_getter. 
+   C_getter ptr = do _ <- guard (\<lambda>s. is_valid s ptr);
+                gets (\<lambda>s. isa_getter (heap_getter s ptr)) 
+                od"}
+         $ (# isa_getter info) $ field_getter $ is_valid_struct 
+       $ heap_getter   
+  in
+     make_getset_prop_gen [] cncl ctxt
+  end
+\<close>
+
+ML \<open>
+fun mk_setdef_prop heap_setter is_valid_struct     
+  (info : field_layout) ctxt : term =  
+  let
+   
+   
+   val field_setter    = #setter info ^ "'" |> Syntax.read_term ctxt;
+
+
+   val cncl =
+       @{term "\<lambda> isa_setter C_setter is_valid heap_setter. 
+   C_setter ptr v = do _ <- guard (\<lambda>s. is_valid s ptr);
+   modify (heap_setter (\<lambda>a. a(ptr := isa_setter (a ptr) v)))
+                od"}
+         $ (# isa_setter info) $ field_setter $ is_valid_struct 
+       $ heap_setter   
+  in
+     make_getset_prop_gen [] cncl ctxt
+  end
+\<close>
+
+ML \<open>
+fun mk_getAsetB_prop (infoA : field_layout)(infoB : field_layout) ctxt : term =
+  let
+   val prms = [ ]
+   val cncl = @{term "\<lambda> getter setter. getter (setter b v) = getter b"}
+         $ (# isa_getter infoA) $ (# isa_setter infoB)
+  in     
+   make_getset_prop_gen prms cncl ctxt
+  end
+\<close>
+
+(* analogous to mk_urecord_lems_for_uval *)
+ML\<open> fun mk_getset_lems_for_rec file_nm ctxt name (infos : field_layout list) =
+(* specialised-lemma generation for nth struct.*)
+(* All uvals can reach this function. I have to filter them at some point.*)
+ let
+  
+  val struct_C_nm = name;
+  
+  val _ = tracing ("mk_getset_lems_for_rec is generating lems for " ^ struct_C_nm)
+  val heap            = Symtab.lookup (HeapInfo.get (Proof_Context.theory_of ctxt)) file_nm
+                        |> Utils.the' "heap in mk_getset_lems_for_rec failed."
+                        |> #heap_info;
+  val struct_ty       = Syntax.read_typ ctxt struct_C_nm;
+  val is_valid_struct = Typtab.lookup (#heap_valid_getters heap) struct_ty
+             |> Utils.the' "is_valid_struct in take_member_default_mk_prog failed."
+             |> Const;
+   val heap_getter = Typtab.lookup (#heap_getters heap) struct_ty
+             |> Utils.the' "heap_getter in take_member_default_mk_prog failed." |> Const
+   val heap_setter = Typtab.lookup (#heap_setters heap) struct_ty
+             |> Utils.the' "heap_getter in take_member_default_mk_prog failed." |> Const
+       
+  
+  val (num_of_fields, field_names) = (List.length infos, List.map #name infos)
+  val _ = tracing (@{make_string} (List.map #name infos))
+
+  (* specialised_lemmas for each fields.
+   * Three lemmas are generated if uval is of Writable.*)
+  fun mk_lems_for_nth_field (field_num:int) =
+   let
+    val field_C_nm           = List.nth (field_names, field_num)
+    val field_info           = List.nth (infos, field_num)
+   in
+    [{prop = mk_getdef_prop heap_getter is_valid_struct field_info ctxt,
+      typ = GetDef, 
+      name = # getter field_info ^ "_def_alt",
+        mk_tactic = cheat_tactic},
+{prop = mk_setdef_prop heap_setter is_valid_struct field_info ctxt,
+      typ = SetDef, 
+      name = # setter field_info ^ "_def_alt",
+        mk_tactic = cheat_tactic}
+ ]
+   end;
+
+  fun mk_lems_for_nth_fields (field_numA:int) (field_numB:int)
+    : getset_lem list =
+   let
+    val field_C_nmA           = List.nth (field_names, field_numA)
+    val field_infoA           = List.nth (infos, field_numA)
+    val field_C_nmB           = List.nth (field_names, field_numB)
+    val field_infoB           = List.nth (infos, field_numB)
+    val lem_name = name ^ "_get_" ^ field_C_nmA ^
+                          "_set_" ^ field_C_nmB
+    val lem = 
+      if field_numA = field_numB then
+        {prop = mk_getset_prop field_infoA ctxt, typ = GetSet, 
+        name = lem_name,
+        mk_tactic = cheat_tactic}
+      else
+        {prop = mk_getAsetB_prop field_infoA field_infoB ctxt, 
+        typ = GetASetB, 
+        name = lem_name,
+        mk_tactic = cheat_tactic}
+
+   in
+    [ lem  ]
+   end;
+
+  val lems1 = 
+      List.tabulate (num_of_fields, fn field_numA =>
+       List.tabulate (num_of_fields, fn field_numB  =>
+       (let
+        val _ = tracing ("  get o set for field numbers " ^ (Int.toString field_numA) ^
+           " and " ^ (Int.toString field_numB))
+       in
+        mk_lems_for_nth_fields field_numA field_numB end))
+       |> List.concat)
+
+  val lems2 = 
+        List.tabulate (num_of_fields, fn field_num => 
+       (let
+         val _ = tracing ("  get/set alternative def for field numbers " ^ (Int.toString field_num))
+        in
+         mk_lems_for_nth_field field_num end))
+
+  val urecord_lems_for_nth_struct = 
+    List.revAppend (lems1, lems2)
+     |> List.concat 
+     : getset_lem list;
+ in
+  urecord_lems_for_nth_struct : getset_lem list
+ end;
+\<close>
+
+(* analogous to mk_lems *)
+ML\<open> fun mk_getset_lems file_nm ctxt (* : {name : string, prop : term} *) =
+ let
+  val uvals = get_uvals file_nm (Proof_Context.theory_of ctxt) |> Utils.the' "mk_getset_lems"
+  val names_infos =  (uvals |> get_uval_custom_layout_records 
+    |> List.map (fn x => (get_ty_nm_C x, get_uval_custom_layout x)) |> rm_redundancy)
+ (*  val uvals                 = read_table file_nm thy; *)
+  val num_of_uvals          = List.length names_infos;
+  fun get_nth_name_infos nth      = List.nth (names_infos, nth);
+  val get_urecord_lems  = mk_getset_lems_for_rec file_nm ctxt;
+
+  val (lemss:getset_lem list list) = List.tabulate (num_of_uvals, fn struct_num =>
+     let
+       val (name, infos) = get_nth_name_infos struct_num ;
+     in  
+     tracing ("mk_getset_lems started working for struct_number " ^ string_of_int struct_num ^
+              " which corresponds to " ^ (*@{make_string}*) name);
+    
+     get_urecord_lems name infos  
+    end) ;
+ in
+  List.concat lemss
+  (* I don't know what does this part (copied from mk_lems) *)
+(*
+   |> map (fn v => (#name v, v))
+   |> Symtab.make_list |> Symtab.dest
+   |> map (fn (nm, xs) => let
+       val fst_x = hd xs;
+       val _ = map (fn x => (#prop x aconv #prop fst_x) orelse
+             raise TERM ("lemmas: non duplicate for " ^ nm, [#prop x, #prop fst_x])) xs
+       (* Why does Thomas want to have duplicate !? *)
+      in hd xs end
+    )*)
+ end;
+\<close>
+
+ML \<open>
+
+
+(* adapted from prove_put_in_bucket_non_esac_especialised_lemma *)
+fun prove_put_in_bucket_getset_lemma (lem : getset_lem) lthy = 
+   let
+     val (lem_name, prop, mk_tac) = (#name lem, #prop lem, #mk_tactic lem);
+     (* We want to have schematic variables rather than fixed free variables after registering this lemma.*)
+     val names = Variable.add_free_names lthy prop [];
+     val some_thm = (SOME (Goal.prove lthy names [] prop (fn {context, prems} => (mk_tac context))))
+                 handle ERROR err => (warning lem_name; warning err; NONE);
+   (* If proof goes well, register the proved lemma and putting it in the corresponding bucket.
+    * If not, add the name of the thm in Unborn_Thms. *)
+      val lthy = case some_thm of
+               SOME thm =>
+                  Local_Theory.note ((Binding.name lem_name, []), [thm]) lthy |> snd |>
+                  GetSetSimp.add_local thm
+             | NONE => Local_Theory.target (add_unborns lem_name) lthy;
+  in
+     lthy
+  end
+
+
+\<close>
+
+ML \<open>
+(* adapted from local_setup_take_put_member_case_esac_specialised_lemmas *)
+fun local_setup_getset_lemmas file_nm lthy =
+ let
+  val lems:getset_lem list = mk_getset_lems file_nm  lthy;
+  val lthy''  = fold prove_put_in_bucket_getset_lemma lems lthy;
+ in
+  lthy''
+ end;
+
+\<close>
+
 
 end
