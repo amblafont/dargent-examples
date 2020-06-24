@@ -82,7 +82,6 @@ the C and isabelle custom getters/setters match.
 
 
 setup \<open>generate_isa_getset_records_for_file "variant_dargentisa.c" @{locale variant_dargentisa} \<close>
-ML \<open>val uvals = Symtab.lookup (UVals.get @{theory}) "variant_dargentisa.c" |> the\<close>
 
 context variant_dargentisa begin
 
@@ -98,7 +97,7 @@ thm d3_get_a'_def d3_get_a'_def' deref_d3_get_a_def
 end
 (* the value/type relation were adapted to custom layouts *)
 local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets "variant_dargentisa.c" \<close>
-
+thm val_rel_t1_C_def
 
 (* 
 Now are the various lemmas regarding custom getter/setters. We call them get/set lemmas
@@ -119,6 +118,17 @@ There are 4 different types of lemmas. I write the naive version below
 3. `C_get = isabelle_get`
 4. `C_set = isabelle_set`
 
+(r : Simple)
+get_b (set_b r (B u)) <> B u
+
+B u = { tag = B, A_field = ?, B_field = u, .. }
+
+get_b (r' : bytes[n]) = { tag = B, A_field = ?, B_field = . ,  }
+
+r' = [ . . . . . ]
+        [  A  ]
+      [ B  ]
+ 
 The first is too naive because it does not hold for variants: if a field is a variant,
 then the associated getter erases the irrelevant fields. Thus equality is too strong,
 but we can replace them with value relation preservation:
@@ -183,14 +193,68 @@ lemma aux : "(UCAST(32 \<rightarrow> 8)
             16) &&
            0xFF) = x6)"
   by word_bitwise
+lemma aux2 : "(A \<and> (A \<longrightarrow> B)) \<longleftrightarrow> A \<and> B "
+  by fastforce
+
+lemma aux3 : " ((x && 0xFF00FFFF || 0x10000) && 0xFFFFFF ||
+        (0xFF && UCAST(8 \<rightarrow> 32) w && 0xFF << 24) >>
+        16) &&
+       0xFF =
+       1"
+  apply word_bitwise
+  done
+
+lemma stupid : "P \<Longrightarrow> (Q \<longrightarrow> P)"
+  by fast
+
 
 lemma get_set_b[GetSetSimp]  : "val_rel x v \<Longrightarrow> val_rel x (deref_d9_get_b (deref_d32_set_b b v))"
-  apply(simp add:deref_d9_get_b_def deref_d32_set_b_def)
 
-  apply (simp add: ValRelSimp)
-  apply (elim exE )
-(*  this removes a lot of impossible cases  *)
+  apply(simp only:deref_d9_get_b_def deref_d32_set_b_def )
+  apply (simp only: HOL.if_split)
+ 
+  apply safe
+ 
+  find_theorems "?P (if _ then _ else _) \<longleftrightarrow> _"
+  apply (simp only: ValRelSimp)
   apply (simp add:TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def )
+
+  apply (simp add:aux3)
+  apply (elim exE conjE disjE)
+      apply (simp)
+  thm back_subst
+      apply(rule_tac P="val_rel uval"  in back_subst )
+       apply assumption
+      apply (thin_tac _)+
+      apply word_bitwise
+
+
+  
+      apply (simp add:aux2)
+
+      apply (intro conjI)
+          apply(thin_tac _)+
+          apply word_bitwise
+   
+
+  
+(*  apply (simp add:aux3) *)
+  thm impI
+ 
+    apply word_bitwise
+
+
+
+      apply clarsimp
+      apply(subgoal_tac "
+(data_C b.[0] && 0xFF00FFFF || 0x10000) && 0xFFFFFF ||
+        (0xFF && UCAST(8 \<rightarrow> 32) z && 0xFF << 24) >>
+        16) &&
+       0xFF) = z")
+   
+  apply (intro impI)
+(*  this removes a lot of impossible cases  *)
+  
   
   apply(cases v)
 
@@ -290,8 +354,6 @@ lemma aux': "UCAST(32 \<rightarrow> 8) ((x && 0xFF00FFFF || 0x20000 >> 8) && 0xF
     UCAST(32 \<rightarrow> 8) ((x >> 8) && 0xFF)"
   by word_bitwise
 
-lemma stupid : "P \<Longrightarrow> (Q \<longrightarrow> P)"
-  by fast
 
 lemma get_a_set_b[GetSetSimp] : "deref_d3_get_a (deref_d32_set_b b v) = deref_d3_get_a b"
   apply(simp add:deref_d3_get_a_def deref_d32_set_b_def

@@ -184,6 +184,94 @@ fun all_corres_goals corres_tac typing_tree_of time_limit ctxt (tab : obligation
   in thm_tab end
 \<close>
 *)
+(*
+
+Fixing unused variables
+ 
+Proving: Cogent.expr.Take
+ 
+corres_take_boxed
+ 
+  Proving: Cogent.expr.Take
+
+should be a corres_take_boxed here
+ 
+Failed: getVals_corres_0 with error:
+ 
+*)
+ML \<open>prop_tab\<close>
+
+lemma "\<And>a a' \<sigma> s vf va.
+       val_rel a a' \<Longrightarrow>
+       val_rel vf va \<Longrightarrow>
+       corres state_rel
+        (Take (Var 1) 1
+          (LetBang (set [1])
+            (Struct
+              [TSum [(''A'', TPrim (Num U8), Unchecked)],
+               TSum
+                [(''A'', TPrim (Num U8), Unchecked), (''B'', TPrim (Num U16), Unchecked),
+                 (''C'', TPrim (Num U32), Unchecked), (''D'', TPrim (Num U64), Unchecked),
+                 (''E'', TPrim Bool, Unchecked)]]
+              [Var 2, Var 0])
+            (Struct
+              [TRecord
+                [(''a'', TSum [(''A'', TPrim (Num U8), Unchecked)], Taken),
+                 (''b'',
+                  TSum
+                   [(''A'', TPrim (Num U8), Unchecked), (''B'', TPrim (Num U16), Unchecked),
+                    (''C'', TPrim (Num U32), Unchecked), (''D'', TPrim (Num U64), Unchecked),
+                    (''E'', TPrim Bool, Unchecked)],
+                  Taken)]
+                (Boxed Writable undefined),
+               TRecord
+                [(''a'', TSum [(''A'', TPrim (Num U8), Unchecked)], Present),
+                 (''b'',
+                  TSum
+                   [(''A'', TPrim (Num U8), Unchecked), (''B'', TPrim (Num U16), Unchecked),
+                    (''C'', TPrim (Num U32), Unchecked), (''D'', TPrim (Num U64), Unchecked),
+                    (''E'', TPrim Bool, Unchecked)],
+                  Present)]
+                Unboxed]
+              [Var 2, Var 0])))
+        (do vb <- d9_get_b' a';
+            vc <- gets (\<lambda>_. vb);
+            vd <-
+            condition (\<lambda>s. LETBANG_TRUE \<noteq> 0)
+              (gets
+                (\<lambda>_. b_C_update (\<lambda>_. vc)
+                       (a_C_update (\<lambda>_. va) (t25_C (t2_C 0 0) (t8_C 0 0 0 0 0 (bool_t_C 0))))))
+              (do _ <- gets (\<lambda>_. ());
+                  gets (\<lambda>_. undefined)
+               od);
+            gets
+             (\<lambda>_. p2_C_update (\<lambda>_. vd)
+                    (p1_C_update (\<lambda>_. a')
+                      (t26_C NULL (t25_C (t2_C 0 0) (t8_C 0 0 0 0 0 (bool_t_C 0))))))
+         od)
+        \<xi>_0 [vf, a, a] \<Xi>
+        [Some (TSum [(''A'', TPrim (Num U8), Unchecked)]),
+         Some
+          (TRecord
+            [(''a'', TSum [(''A'', TPrim (Num U8), Unchecked)], Taken),
+             (''b'',
+              TSum
+               [(''A'', TPrim (Num U8), Unchecked), (''B'', TPrim (Num U16), Unchecked),
+                (''C'', TPrim (Num U32), Unchecked), (''D'', TPrim (Num U64), Unchecked),
+                (''E'', TPrim Bool, Unchecked)],
+              Present)]
+            (Boxed Writable undefined)),
+         None]
+        \<sigma> s "
+ML_prf \<open>
+val ctxt = @{context}
+ val net_resolve_tac = Tactic.build_net #> resolve_from_net_tac ctxt
+\<close>
+  apply (tactic \<open> (@{thms TakeBoxed} |> net_resolve_tac) 1\<close>)
+  apply (simp add:TakeBoxed)
+thm TakeBoxed
+  sorry
+
 ML \<open> val thm_tab = all_corres_goals (corres_tac_local true) typing_tree_of 99999 @{context} prop_tab \<close>
 (* Resolve function calls recursively *)
 ML \<open>
