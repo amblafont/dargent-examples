@@ -49,3 +49,6 @@ read_table is called multiple times in CorresSetup (whereas it could be read onc
 
 TODO: check examples with different layouts for the same record (I fear a clash in the table file, as the layout is always undefined)
 TODO: make Complements take statements about heap_update as arguments
+
+some working examples:
+bucket/nested_boxed.cogent
