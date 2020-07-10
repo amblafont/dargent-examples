@@ -9,43 +9,7 @@ Currently, the branch dargentisa succeeds on a simple example with layout
 the projection of a singleton record)
 
 --------------------------
-
-Snippset to insert in generated files *_CorresSetup.thy:
-(TODO: modify the haskell files in cogent, or in a short-term,
-modify compile.sh so that it inserts this snippset)
-
-For branch dargentisa:
-
-instantiation array :: (cogent_C_val, finite) cogent_C_val
-begin
-  definition val_rel_array_def:
-    " val_rel uv (x :: ('a,'b) array) ≡
-        (∃(p:: 'a ptr) repr ptrl. uv = (UPtr (ptr_val p) repr ptrl))"
-   (* TODO: match ptrl with the array  *)
-  definition type_rel_array_def:
-    "type_rel typ (_:: ('a,'b) array  itself) ≡ ∃repr ptrl. typ = RPtr repr ptrl ∧ type_rel repr TYPE('a)"
-  instance ..
-end
-
-you also need to add val_rel_array_def to val_rel_simps
- and similarly for type_rel_array_def in type_rel_simps
-
-For branch dargent:
-
-instantiation array :: (cogent_C_val, finite) cogent_C_val
-begin
-  definition val_rel_array_def:
-    " val_rel uv (x :: ('a,'b) array) ≡
-        (∃(p:: 'a ptr) repr . uv = (UPtr (ptr_val p) repr ))"
-   (* TODO: match ptrl with the array  *)
-  definition type_rel_array_def:
-    "type_rel typ (_:: ('a,'b) array  itself) ≡ ∃repr. typ = RPtr repr  ∧ type_rel repr TYPE('a)"
-  instance ..
-end
-
---------------------------
 TODO: THe C compilation generates useless masks in the parts of the getters for custom layouts
-read_table is called multiple times in CorresSetup (whereas it could be read once and for all)
 
 TODO: check examples with different layouts for the same record (I fear a clash in the table file, as the layout is always undefined)
 TODO: make Complements take statements about heap_update as arguments
