@@ -39,6 +39,18 @@ lemmas.
 The remaining task is to replace this cheating tactic with a proper automatic
 proof tactic.
 
+# Known issues
+
+- The (dargent) formalization theoretically requires the custom getters to be 
+generated, as they are used to define the value relation. In practice (but this
+could be refined), it also requires the custom setters to be generated.
+However, the cogent compiler may not generate custom getters/setters if they
+are not used.
+
+- The formalization assumes that there is only one custom getter for each field.
+However, the compiler may generate two of them: one for the member operation,
+and one for the take operation, although they seem to be the same. 
+
 # TODOs
 
 TODO: The C compilation generates useless masks in the parts of the getters for custom layouts
