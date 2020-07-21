@@ -9,7 +9,7 @@ begin
 
 declare [[record_codegen = false]]
 declare [[use_anonymous_local_variables=true]]
-new_C_include_dir "/home/laf027/cogent/branches/dargentisa/cogent/lib"
+new_C_include_dir "/home/admin/Development/TS/cogent/dargent/cogent/lib"
 install_C_file "variant_dargentisa.c"
 autocorres [keep_going, ts_rules = nondet, no_opt, skip_word_abs] "variant_dargentisa.c"
 

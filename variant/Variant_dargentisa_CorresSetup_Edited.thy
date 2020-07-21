@@ -12,6 +12,7 @@ imports "CogentCRefinement.Deep_Embedding_Auto"
 "CogentCRefinement.Dargent_Custom_Get_Set"
 "build_variant/Variant_dargentisa_ACInstall"
 "build_variant/Variant_dargentisa_TypeProof"
+"Lib.Apply_Trace_Cmd"
 "../Complements"
 begin
 
@@ -187,220 +188,142 @@ is the right one *)
 
 
 
-lemma aux : "(UCAST(32 \<rightarrow> 8)
-          ((data_C b.[4] && 0xFF00FFFF ||
-            (0xFF && UCAST(8 \<rightarrow> 32)  x6 && 0xFF << 16) >>
-            16) &&
-           0xFF) = x6)"
-  by word_bitwise
-lemma aux2 : "(A \<and> (A \<longrightarrow> B)) \<longleftrightarrow> A \<and> B "
-  by fastforce
+lemma index_update_eq:
+  fixes f :: "'a[('b :: finite)]"
+  assumes "k < CARD('b)"
+  shows
+  "(Arrays.update f n x.[k]) = (if n = k then x else f.[k])"
+  using assms
+  by simp
 
-lemma aux3 : " ((x && 0xFF00FFFF || 0x10000) && 0xFFFFFF ||
-        (0xFF && UCAST(8 \<rightarrow> 32) w && 0xFF << 24) >>
-        16) &&
-       0xFF =
-       1"
-  apply word_bitwise
+lemma tags_distinct':
+  "TAG_ENUM_A \<noteq> TAG_ENUM_B"
+  "TAG_ENUM_A \<noteq> TAG_ENUM_C"
+  "TAG_ENUM_A \<noteq> TAG_ENUM_D"
+  "TAG_ENUM_A \<noteq> TAG_ENUM_E"
+  "TAG_ENUM_B \<noteq> TAG_ENUM_C"
+  "TAG_ENUM_B \<noteq> TAG_ENUM_D"
+  "TAG_ENUM_B \<noteq> TAG_ENUM_E"
+  "TAG_ENUM_C \<noteq> TAG_ENUM_D"
+  "TAG_ENUM_C \<noteq> TAG_ENUM_E"
+  "TAG_ENUM_D \<noteq> TAG_ENUM_E"
+  by (simp add: TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def)+
+
+lemmas tags_distinct = tags_distinct' tags_distinct'[symmetric]
+
+lemma neg_disj_pos_conj_iff:
+  "\<not> A \<and> (A \<or> B) \<longleftrightarrow> \<not> A \<and> B"
+  by blast
+
+lemma pos_disj_neg_conj_iff:
+  "A \<or> (\<not>A \<and> B) \<longleftrightarrow> A \<or> B"
+  by blast
+
+lemma pos_disj_neg_conj_iff2:
+  "A \<or> (B \<and> \<not>A) \<longleftrightarrow> A \<or> B"
+  by blast
+
+lemma posA_B_negA_iff:
+  "A \<or> B \<or> \<not> A \<longleftrightarrow> True"
+  by blast
+
+
+lemma xANDyANDx_eq: "x && y && x = y && x"
+  by (metis AND_twice word_bw_comms(1))
+
+lemma ucast_and_distrib:
+  "UCAST(('a::len) \<rightarrow> ('b::len)) (a && b) = UCAST('a \<rightarrow> 'b) a && UCAST('a \<rightarrow> 'b) b"
+  unfolding ucast_def Word.bitAND_word.abs_eq uint_and
+  by simp
+
+lemma ucast_down_shiftr_distrib:
+  "LENGTH('b) \<le> LENGTH('a) \<Longrightarrow> UCAST(('a::len) \<rightarrow> ('b::len)) (a << n) = UCAST('a \<rightarrow> 'b) a << n"
+  apply (simp add: ucast_def uint_shiftl word_size shiftl_int_def)
+  apply (simp add: wi_bintr wi_hom_syms)
+  apply (simp add: shiftl_t2n word_of_int_2p)
   done
 
-lemma stupid : "P \<Longrightarrow> (Q \<longrightarrow> P)"
-  by fast
+lemma ucast_up_shiftr_distrib:
+  "LENGTH('b) \<ge> LENGTH('a) \<Longrightarrow> UCAST(('a::len) \<rightarrow> ('b::len)) (a << n) = (UCAST('a \<rightarrow> 'b) a << n) && mask LENGTH('a)"
+  apply (simp add: ucast_def uint_shiftl word_size shiftl_int_def)
+  apply (simp add: and_mask_wi[symmetric])
+  apply (simp add: wi_hom_syms)
+  apply (simp add: shiftl_t2n word_of_int_2p)
+  apply (simp add: semiring_normalization_rules(7))
+  done
 
 
-lemma get_set_b[GetSetSimp]  : "val_rel x v \<Longrightarrow> val_rel x (deref_d9_get_b (deref_d32_set_b b v))"
+lemma max_and_word_simps:
+  "\<And>a::8 word. 0xFF && a = a"
+  "\<And>a::16 word. 0xFFFF && a = a"
+  "\<And>a::32 word. 0xFFFFFFFF && a = a"
+  "\<And>a::64 word. 0xFFFFFFFFFFFFFFFF && a = a"
+  by (simp add: word_and_max_simps word_bw_comms)+
 
-  apply(simp only:deref_d9_get_b_def deref_d32_set_b_def )
-  apply (simp only: HOL.if_split)
- 
-  apply safe
- 
-  find_theorems "?P (if _ then _ else _) \<longleftrightarrow> _"
+ML\<open>
+(* This tactic was created using the "throw things in and see if it works" strategy.
+ * Eventually, we should write something more principled. ~ v.j. / 2020-07-15
+ *)
+fun solve_dargent_bitwise_tac ctxt i =
+  let
+  ; val reduce_variant1 (* only *) =  @{thms if_False if_True refl index_update_eq card_bit0 card_bit1}
+  ; val reduce_variant2 = @{thms tags_distinct disj_imp[symmetric] Inductive.imp_conj_iff
+                                 neg_disj_pos_conj_iff pos_disj_neg_conj_iff}
+  ; val word_distrib_simpset =
+    @{thms word_bool_alg.conj_disj_distrib word_bool_alg.conj_disj_distrib2
+           shiftr_over_or_dist shiftr_over_and_dist
+           shiftl_over_or_dist shiftl_over_and_dist
+           word_bool_alg.conj.assoc
+           word_bool_alg.disj.assoc
+           ucast_and_distrib ucast_or_distrib ucast_ucast_mask}
+  ; val word_simps2 =
+    @{thms xANDyANDx_eq and_mask2 word_size ucast_or_distrib mask_def ucast_id word_and_max_simps
+           max_and_word_simps}
+  ; val word_join_simps =
+    @{thms word_bool_alg.conj_disj_distrib[symmetric] word_and_max_simps max_and_word_simps}
+  ; val word_left_right_shift_simps =
+    @{thms and_mask2 and_not_mask[symmetric] mask_def
+           word_bool_alg.conj.assoc word_bool_alg.disj.assoc}
+  ; val cleanup_simps =
+    @{thms pos_disj_neg_conj_iff pos_disj_neg_conj_iff2 posA_B_negA_iff}
+   in ((simp_tac ((clear_simpset ctxt) addsimps reduce_variant1)
+        THEN' simp_tac ((clear_simpset ctxt) addsimps reduce_variant2)
+        THEN' (fn i => REPEAT_DETERM (DETERM (CHANGED (
+          (simp_tac ((clear_simpset ctxt) addsimps word_distrib_simpset)
+          THEN' simp_tac (ctxt addsimps word_simps2)
+          ) i
+        ))))
+        THEN' (fn i => (TRY (
+          (simp_tac (ctxt addsimps word_left_right_shift_simps)
+          THEN' simp_tac (ctxt addsimps word_join_simps)
+          THEN' (fn i => TRY (simp_tac (ctxt addsimps cleanup_simps) i))) i
+      )))) i)
+  end;
+fun getput_variant_tac ctxt =
+  let val tags_cleanup =
+    @{thms tags_distinct if_False if_True refl disj_imp[symmetric] neg_disj_pos_conj_iff}
+   in TRYALL (fn i => CHANGED (
+        (simp_tac (ctxt addsimps tags_cleanup)
+        THEN' solve_dargent_bitwise_tac ctxt) i))
+  end;
+\<close>
+
+
+lemma get_set_b[GetSetSimp]: "val_rel x v \<Longrightarrow> val_rel x (deref_d9_get_b (deref_d32_set_b b v))"
   apply (simp only: ValRelSimp)
-  apply (simp add:TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def )
-
-  apply (simp add:aux3)
-  apply (elim exE conjE disjE)
-      apply (simp)
-  thm back_subst
-      apply(rule_tac P="val_rel uval"  in back_subst )
-       apply assumption
-      apply (thin_tac _)+
-      apply word_bitwise
-
-
-  
-      apply (simp add:aux2)
-
-      apply (intro conjI)
-          apply(thin_tac _)+
-          apply word_bitwise
-   
-
-  
-(*  apply (simp add:aux3) *)
-  thm impI
- 
-    apply word_bitwise
-
-
-
-      apply clarsimp
-      apply(subgoal_tac "
-(data_C b.[0] && 0xFF00FFFF || 0x10000) && 0xFFFFFF ||
-        (0xFF && UCAST(8 \<rightarrow> 32) z && 0xFF << 24) >>
-        16) &&
-       0xFF) = z")
-   
-  apply (intro impI)
-(*  this removes a lot of impossible cases  *)
-  
-  
-  apply(cases v)
-
-  apply (rule conjI impI)+
-     apply(clarsimp)
-    apply(clarsimp)
-    apply(rule_tac P="val_rel uval" and a=x3  in back_subst )
-     apply assumption
-    apply word_bitwise
-   apply clarsimp
-   apply word_bitwise
-
-  apply (rule conjI impI)+
-     apply(clarsimp)
-     apply word_bitwise
-
-    apply(clarsimp)  
-    apply(rule FalseE)
-    apply word_bitwise
-   apply clarsimp
-   apply (rule conjI impI)+
-    apply(rule_tac P="val_rel uval" and a=x4 in back_subst )
-     apply assumption
-    apply word_bitwise
-   apply word_bitwise
-
-  apply (rule conjI impI)+
-
-     apply clarsimp
-     apply word_bitwise
-    apply clarsimp
-    apply(rule FalseE)
-    apply word_bitwise
-   apply clarsimp
-   apply (rule conjI impI)+
-    apply word_bitwise
-   apply (rule conjI impI)+
-    apply(rule_tac P="val_rel uval" and a=x5 in back_subst )
-     apply assumption
-    apply word_bitwise
-   apply (word_bitwise)
-
-  apply (rule conjI impI)+
-     apply clarsimp
-     apply word_bitwise
-    apply clarsimp
-    apply(rule FalseE)
-    apply word_bitwise
-   apply clarsimp
-   apply (rule conjI impI)+
-    apply word_bitwise
-   apply (rule conjI impI)+
-    apply word_bitwise
-   apply (rule conjI impI)+
-    apply(rule_tac P="val_rel uval" and a=x6 in back_subst )
-     apply assumption    
-    apply (simp  add:aux)
-   apply word_bitwise
-
-  apply (rule conjI impI)+
-    apply clarsimp
-    apply word_bitwise
-   apply clarsimp
-   apply(rule FalseE)
-   apply word_bitwise
-
-  apply (rule conjI impI)+
-    apply clarsimp
-    apply word_bitwise
-   apply clarsimp
-   apply(rule FalseE)
-   apply word_bitwise
-
-  apply (rule conjI impI)+
-    apply clarsimp
-    apply word_bitwise
-   apply clarsimp
-   apply(rule FalseE)
-   apply word_bitwise
-
-  apply clarsimp
-  apply (rule conjI impI)+
-    
-   apply word_bitwise
-  apply (rule conjI impI)+
-
-  apply(rule_tac P="val_rel uval" and a=x2 in back_subst )
-   apply assumption
-  apply word_bitwise
+  apply (case_tac x; simp)
+  apply (elim conjE disjE; simp, simp only: deref_d9_get_b_def deref_d32_set_b_def)
+    apply (tactic \<open>getput_variant_tac @{context}\<close>)
   done
-
-
-
-
-
-lemma aux': "UCAST(32 \<rightarrow> 8) ((x && 0xFF00FFFF || 0x20000 >> 8) && 0xFF) =
-    UCAST(32 \<rightarrow> 8) ((x >> 8) && 0xFF)"
-  by word_bitwise
-
 
 lemma get_a_set_b[GetSetSimp] : "deref_d3_get_a (deref_d32_set_b b v) = deref_d3_get_a b"
-  apply(simp add:deref_d3_get_a_def deref_d32_set_b_def
-)
-(* This removes contradictory cases, such as TAG_ENUM_B = TAG_ENUM_C *)
-  apply (simp add:TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def )
-  apply (rule conjI impI)+  
-(* why doesn't it work ? *)
-   apply (word_bitwise)
-   apply (simp add:aux')
-
-  apply (rule stupid conjI)+
-   apply word_bitwise
-  apply (rule stupid conjI)+
-   apply word_bitwise
-  apply (rule stupid conjI)+
-   apply word_bitwise
-  apply (rule stupid conjI)+
-  apply word_bitwise
+  apply (simp only: deref_d3_get_a_def deref_d32_set_b_def)
+  apply ( tactic \<open>getput_variant_tac @{context}\<close>)
   done
 
 lemma get_b_set_a[GetSetSimp] : "deref_d9_get_b (deref_d27_set_a b v) = deref_d9_get_b b"
-apply(simp add:deref_d9_get_b_def deref_d27_set_a_def)
-(* This removes contradictory cases, such as TAG_ENUM_B = TAG_ENUM_C *)
-  apply (simp add:TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def )
-
-
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
-  apply (rule conjI impI)+
-   apply word_bitwise
+  apply (simp only: deref_d9_get_b_def deref_d27_set_a_def)
+  apply (tactic \<open>getput_variant_tac @{context}\<close>)
   done
 
 
@@ -439,7 +362,7 @@ lemma d27_set_a'_def_alt[GetSetSimp] :
   apply(simp add:comp_def)
   done
 find_theorems name:state
-thm heap_rel_ptr_def
+
 lemma d32_set_b'_def_alt[GetSetSimp] :
 "d32_set_b' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
         modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d32_set_b (a ptr) v))) od )
