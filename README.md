@@ -34,7 +34,9 @@ files in it.
 
 In principle, any example should work: there is some cheating tactic in the 
 generated `_CorresSetup` theory file which automatically prove the get/set
-lemmas.
+lemmas. Currently, the only get/set lemmas that are proven without cheating
+are the ones stating the correspondence between the direct and the monadic
+definition of custom getters/setters.
  
 The remaining task is to replace this cheating tactic with a proper automatic
 proof tactic.

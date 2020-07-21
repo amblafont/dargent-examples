@@ -51,13 +51,16 @@ Non-generated
 is generated (c-parser/recursive_records/recursive_record_package.ML),
 or pass them as an argument to generate_isa_getset
 *)
+
+(*
 lemma heap_t1_C_update_comp[simp]:
   " heap_t1_C_update f o heap_t1_C_update f' = heap_t1_C_update (f o f')"
   by fastforce
 
-lemma heap_t1_C_update_if[simp] : "(if b then heap_t1_C_update f z else heap_t1_C_update g z) = 
+lemma heap_t1_C_update_if[simp] : "
+(if b then heap_t1_C_update f z else heap_t1_C_update g z) = 
   heap_t1_C_update (\<lambda> x. if b then f x else g x) z"
-  by simp
+  by fastforce
 
 lemma heap_t2_C_update_comp[simp]:
   " heap_t2_C_update f o heap_t2_C_update f' = heap_t2_C_update (f o f')"
@@ -66,6 +69,8 @@ lemma heap_t2_C_update_comp[simp]:
 lemma heap_t2_C_update_if[simp] : "(if b then heap_t2_C_update f z else heap_t2_C_update g z) = 
   heap_t2_C_update (\<lambda> x. if b then f x else g x) z"
   by simp
+*)
+
 
 
 (* 
@@ -103,23 +108,43 @@ term deref_d3_get_aa
 
 end
 (* the value/type relation were adapted to custom layouts *)
-local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets "nested_boxed_dargentisa.c" \<close>
+
 thm val_rel_t2_C_def
+thm type_rel_ptr_def
+term Ptr
+thm ptr_val_def
 
 context nested_boxed_dargentisa begin
+end
+(* end of non-generated *)
+
+local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets "nested_boxed_dargentisa.c" \<close>
+local_setup \<open> local_setup_instantiate_cogent_C_heaps_store_them_in_buckets "nested_boxed_dargentisa.c" \<close>
+locale Nested_boxed_dargentisa = "nested_boxed_dargentisa" + update_sem_init
+begin
+
+(*
+
+
+
+ *)
 
 (* This prints the get/set lemmas that should be proven *)
 ML \<open> val lems = mk_getset_lems "nested_boxed_dargentisa.c" @{context} \<close>
 ML \<open>lems  |> map (string_of_getset_lem @{context})|> map tracing\<close>
 
+
+
+
+
+thm L2opt
 lemma d3_get_aa_def_alt[GetSetSimp] : "d3_get_aa' ptr = do _ <- guard (\<lambda>s. is_valid_t2_C s ptr);
                                                            gets (\<lambda>s. deref_d3_get_aa (heap_t2_C s ptr))
                                                         od"
-  apply(simp add:deref_d3_get_aa_def d3_get_aa'_def')
-  apply monad_eq
-  done
+  by (tactic \<open>custom_get_set_monadic_direct_tac @{context} 1\<close>)
 
 lemma t2_C_get_aa_set_aa[GetSetSimp] : "val_rel x v \<Longrightarrow> val_rel x (deref_d3_get_aa (deref_d9_set_aa b v))"
+
   apply(simp add:deref_d3_get_aa_def deref_d9_set_aa_def)
   apply(rule_tac P="val_rel x"  in back_subst )
    apply assumption
@@ -140,18 +165,8 @@ lemma d9_set_aa_def_alt[GetSetSimp] : "d9_set_aa' ptr v =
                                        do _ <- guard (\<lambda>s. is_valid_t2_C s ptr);
                                           modify (heap_t2_C_update (\<lambda>a. a(ptr := deref_d9_set_aa (a ptr) v)))
                                        od"
-  apply(simp add:deref_d9_set_aa_def d9_set_aa'_def')
-apply(simp add:L2opt) 
-  apply monad_eq
-apply(simp add:comp_def)
-    done
-end
-(* end of non-generated *)
+by (tactic \<open>custom_get_set_monadic_direct_tac @{context} 1\<close>)
 
-local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets "nested_boxed_dargentisa.c" \<close>
-local_setup \<open> local_setup_instantiate_cogent_C_heaps_store_them_in_buckets "nested_boxed_dargentisa.c" \<close>
-locale Nested_boxed_dargentisa = "nested_boxed_dargentisa" + update_sem_init
-begin
 
 (* Relation between program heaps *)
 definition
@@ -268,7 +283,9 @@ THEN_ALL_NEW ((rtac (get "all_heap_rel_updE") THEN' atac THEN' atac)
 ))
 1
 \<close>)
- 
+  thm corres_def
+  term type_rel
+  thm state_rel_def[simplified heap_rel_def, simplified] heap_rel_ptr_def
 (* end of non generated *)
 
 (* Generating the specialised take and put lemmas *)

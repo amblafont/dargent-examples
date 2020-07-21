@@ -49,18 +49,6 @@ Non-generated
 
 
 
-(* TODO: move this lemma in the C-parser library, where t1_C_updupd_same
-is generated (c-parser/recursive_records/recursive_record_package.ML),
-or pass them as an argument to generate_isa_getset
-*)
-lemma heap_t1_C_update_comp[simp]:
-  " heap_t1_C_update f o heap_t1_C_update f' = heap_t1_C_update (f o f')"
-  by fastforce
-
-lemma heap_t1_C_update_if[simp] : "(if b then heap_t1_C_update f z else heap_t1_C_update g z) = 
-  heap_t1_C_update (\<lambda> x. if b then f x else g x) z"
-  by simp
-
 
 (* 
 This ML function generate custom getters/setters in Isabelle from
@@ -83,7 +71,21 @@ the C and isabelle custom getters/setters match.
 
 setup \<open>generate_isa_getset_records_for_file "variant_dargentisa.c" @{locale variant_dargentisa} \<close>
 
+
 context variant_dargentisa begin
+
+(* This prints the get/set lemmas that should be proven *)
+ML \<open> val lems = mk_getset_lems "variant_dargentisa.c" @{context} \<close>
+ML \<open>lems  |> map (string_of_getset_lem @{context})|> map tracing\<close>
+
+(* This proves the get/set lemmas (currently by cheating) *)
+(*
+local_setup \<open>local_setup_getset_lemmas "variant_dargentisa.c"\<close>
+*)
+end
+
+context variant_dargentisa begin
+
 
 
 (* Example: 
@@ -108,7 +110,7 @@ remaining hard part (because we never know if we have addressed all the cases).
 
 
 
-
+https://github.com/amblafont/AutoCorres
 * Different kind of lemmas
 
 There are 4 different types of lemmas. I write the naive version below
@@ -414,43 +416,27 @@ These lemmas correspond to these kind of statements
 lemma d3_get_a_def_alt[GetSetSimp] : "d3_get_a' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
                                          gets (\<lambda>s. deref_d3_get_a (heap_t1_C s x')) 
                                       od"
-  apply(simp add:deref_d3_get_a_def d3_get_a'_def')
-  apply(simp add:L2opt unat_ucast_32_8)
-
-  by monad_eq
+by (tactic \<open>custom_get_set_monadic_direct_tac @{context} 1\<close>)
 
 
 lemma d9_get_b_def_alt[GetSetSimp] : "d9_get_b' x' = do _ <- guard (\<lambda>s. is_valid_t1_C s x');
                                          gets (\<lambda>s. deref_d9_get_b (heap_t1_C s x')) 
                                       od"
-  apply(simp add:deref_d9_get_b_def d9_get_b'_def')
-  apply(simp add:L2opt unat_ucast_32_8 unat_ucast_32_16 condition_cst)
-  
-  apply monad_eq
-  done
+by (tactic \<open>custom_get_set_monadic_direct_tac @{context} 1\<close>)
 
 lemma d27_set_a'_def_alt[GetSetSimp] :
 "d27_set_a' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
         modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d27_set_a (a ptr) v))) od )
 "    
-  apply(simp add:d27_set_a'_def' deref_d27_set_a_def)
-  apply(simp add:L2opt)  
-  apply monad_eq
-  apply(simp add:comp_def)
-  done
-find_theorems name:state
-thm heap_rel_ptr_def
+by (tactic \<open>custom_get_set_monadic_direct_tac @{context} 1\<close>)
+
 lemma d32_set_b'_def_alt[GetSetSimp] :
 "d32_set_b' ptr v = (do _ <- guard (\<lambda>s. is_valid_t1_C s ptr);
         modify (heap_t1_C_update (\<lambda>a. a(ptr := deref_d32_set_b (a ptr) v))) od )
 "        
-   apply(simp add:d32_set_b'_def' deref_d32_set_b_def)
-  apply(simp add:L2opt condition_cst)  
-  apply monad_eq
-  apply(simp add:comp_def)
-  done
+by (tactic \<open>custom_get_set_monadic_direct_tac @{context} 1\<close>)
 end
-thm state_rel_def
+
 (*
 
 Once the get/set lemmas have been proven, the rest follows, as 

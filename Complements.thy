@@ -22,19 +22,33 @@ theory Complements
   imports AutoCorres.AutoCorres
 begin
 
+find_theorems "UCAST(_ \<rightarrow> _) "
 
-
-(* Why is it necessary to prove this lemma *)
-lemma unat_ucast_32_8 : "unat ( (UCAST(32 \<rightarrow> 8) x))
-         <  2147483648"
+lemma unat_8 : "unat (x :: 8 word) < 0x80000000"
   apply(unat_arith)
-  apply (simp add: unat_ucast_up_simp)
-  done
-
-lemma unat_ucast_32_16 : "unat (UCAST(32 \<rightarrow> 16) x) < 2147483648"
+  by (simp add: unat_ucast_up_simp)
+ 
+lemma unat_16 : "unat (x :: 16 word) < 0x80000000"
   apply(unat_arith)
-  apply (simp add: unat_ucast_up_simp)
-  done
+  by (simp add: unat_ucast_up_simp)
+
+
+
+(* These lemmas seem necessary to prove some
+get/set lemmas (more exactly, to prove the correspondence between
+the monadic and the direct definitions of custom getter/setters).
+It is added to the set of simplification lemmas.
+
+Strangely enough, the statement "unat (x :: 8 word) < 0x80000000"
+is not enough for the proof of the get/set lemma.
+ *)
+lemma unat_ucast_8  : "unat (UCAST(('a :: len0) \<rightarrow> 8)  x) < 0x80000000"
+  by(rule unat_8)
+lemma unat_ucast_16 : "unat (UCAST(('a :: len0) \<rightarrow> 16) x) < 0x80000000"
+  by(rule unat_16)
+
+
+
 
 
 
