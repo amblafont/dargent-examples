@@ -1,0 +1,36 @@
+type Ex =  { field0 : < Con0 Bool 
+            | Con1 Bool >
+ , field1 :  #{ field0 :  #{ field0 :  #{ field0 : Bool }
+                           , field1 :  #{ field0 : Bool
+                                        , field1 : Bool
+                                        , field2 : Bool }
+                           , field2 : Bool }
+              , field1 :  #{ field0 :  #{ field0 :  #{ field0 :  #{ field0 : Bool } }
+                                        , field1 : Bool }
+                           , field1 : Bool }
+              , field2 : Bool
+              , field3 : Bool
+              , field4 :  #{ field0 : Bool }
+              , field5 : Bool
+              , field6 : Bool }
+ , field2 : Bool } 
+ layout record { field0: variant (1b at 15b) { Con0 (0): 1b at 29b
+                                                         , Con1 (1): 1b at 20b }
+                           , field1: record { field0: record { field0: record { field0: 2b at 0b }
+                                                             , field1: record { field0: 1b at 2b
+                                                                              , field1: 1b at 11b
+                                                                              , field2: 1b at 10b }
+                                                             , field2: 1b at 27b }
+                                            , field1: record { field0: record { field0: record { field0: record { field0: 1b at 21b } }
+                                                                              , field1: 1b at 28b }
+                                                             , field1: 3b at 12b }
+                                            , field2: 1b at 25b
+                                            , field3: 2b at 16b
+                                            , field4: record { field0: 1b at 22b }
+                                            , field5: 1b at 7b
+                                            , field6: 1b at 24b }
+                           , field2: 1b at 3b }
+
+main : Ex -> Ex
+main (r {field0,field1,field2}) = r {field0,field1,field2}
+
