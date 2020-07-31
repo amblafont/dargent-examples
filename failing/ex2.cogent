@@ -1,0 +1,13 @@
+-- Currently, CorresSetup fails to devise the direct definition of
+-- the custom setter of field0 in this example
+
+type Example =
+    { field0 : < Con0 < Con0 < Con0 < Con0 U8 > 
+                             | Con1 Bool > > 
+               | Con1 U8 >
+    } layout record { field0: variant (4b at 40b) { Con0 (0): variant (4b at 36b) { Con0 (0): variant (4b at 32b) { Con0 (0): variant (4b at 28b) { Con0 (0): 11b at 17b }
+                                                                                                                                  , Con1 (1): 7b at 25b } }
+                                                                  , Con1 (1): 10b at 30b } }
+
+main : Example -> Example
+main r { field0 } = r { field0 }
