@@ -3,9 +3,6 @@ This document details the following:
 2. What is the structure of the verification framework;
 3. How the verification framework was adapted for dargent.
 
-# Questions
-
-1. Shall I detail the syntax of Dargent?
 
 # What is Dargent
 
@@ -40,7 +37,7 @@ Consider the following example:
         sum    : < A Bool | B U8 >
       }
 ```
-To understand what a layout should specify, we need
+<!-- To understand what a layout should specify, we need -->
 <!-- In case a custom layout is provided, this record will be (roughly) compiled to  -->
 <!-- an array of bytes  -->
 <!-- ```C -->
@@ -110,6 +107,7 @@ operations are expected to satisfy some properties:
 2. getting a set field should return the set value (or at least an equivalent 
 value).
 
+These properties will be later detailed in the section get/set lemmas.
 
 
 <!-- Note that the layout `l` does not affect the compilation of `T`: the return type -->
@@ -161,7 +159,7 @@ value).
     
 <!--     pack_unpack : (R1, R2) -> (R1, R2) -->
 <!--     pack_unpack (r1 { f1, ..}, r2 { f2, ..}) = (r1 {f1 = f2, ..}, r2 {f2 = f1, ..}) -->
-```
+
  
 
 <!-- ## Casts and AutoCorres -->
@@ -226,7 +224,7 @@ the C program and the Isabelle program.
 <!-- 3. an abstract representation of the cogent program in Isabelle (*deep embedding*) -->
 # Adapting the verification framework to Dargent
 
-Dargent does neither affect the shallow embedding nor the deep embedding.
+Dargent neither affects the shallow embedding nor the deep embedding.
 The value semantics and update semantics remain untouched.
 In fact, the main component that must be adapted is the proof of correspondence 
 between the update semantics and the C code.
@@ -275,7 +273,7 @@ is represented by the isabelle record type
 `{ field1 : u8, field2 : u16 }`, where `u8` and `u16` are defined
 in the AutoCorres library.
 Then, C functions are represented as *monadic* Isabelle programs, allowing for
-failing, non determinism, and stateful operations.
+failing, non deterministic, and stateful operations.
 For example, a C function `u16 square(u8 a)` would be represented as
 a term of type `u8 ⇒ NonDet u16` in Isabelle.
 
@@ -350,9 +348,9 @@ provide values for the irrelevant fields as well. What else can it do but
 provide arbitrary values for them? But then, the custom getter `get_a` is not surjective, so
 there is no hope that `get_a ∘ set_a = id`.
 
-## Evaluation of the complexity of proof of the get/set lemmas
+## Evaluation of the complexity of the get/set lemmas
 The correspondence between the direct and monadic definitions of getters/setters (last two
 statements) does not require much effort.
 
-The automation of the first two statements (especially the first), would probably require 
+The automation of the first two statements (especially the first) would probably require 
 monthes to complete.
