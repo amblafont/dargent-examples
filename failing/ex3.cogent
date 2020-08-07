@@ -1,0 +1,36 @@
+-- the equivalence between the direct and monadic setters seems to take an infinite time
+type Example =
+    { field1 :  #{ field0 : < Con0 Bool 
+                            | Con1  #{ field0 : Bool
+                                     , field1 :  #{ field0 : Bool }
+                                     , field2 : Bool } 
+                            | Con2  #{ field0 : Bool } 
+                            | Con3 Bool 
+                            | Con4  #{ field0 : Bool } 
+                            | Con5  #{ field0 : Bool } 
+                            | Con6 Bool >
+                 , field1 : < Con0 Bool 
+                            | Con1 Bool >
+                 , field2 :  #{ field0 : Bool
+                              , field1 : U8 }
+                 , field3 :  #{ field0 :  #{ field0 :  #{ field0 : Bool } } }
+                 , field4 : Bool }
+    } layout record { field1: record { field0: variant (4b at 32b) { Con0 (0): 1b at 31b
+                                                                                   , Con1 (1): record { field0: 1b at 28b
+                                                                                                      , field1: record { field0: 2b at 29b }
+                                                                                                      , field2: 1b at 31b }
+                                                                                   , Con2 (2): record { field0: 1b at 31b }
+                                                                                   , Con3 (3): 1b at 31b
+                                                                                   , Con4 (4): record { field0: 1b at 31b }
+                                                                                   , Con5 (5): record { field0: 2b at 30b }
+                                                                                   , Con6 (6): 2b at 30b }
+                                                     , field1: variant (4b at 42b) { Con0 (0): 6b at 36b
+                                                                                   , Con1 (1): 1b at 41b }
+                                                     , field2: record { field0: 6b at 46b
+                                                                      , field1: 16b at 52b }
+                                                     , field3: record { field0: record { field0: record { field0: 1b at 68b } } }
+                                                     , field4: 3b at 69b }
+                                     }
+
+main : Example -> Example
+main r { field1 } = r {field1}
