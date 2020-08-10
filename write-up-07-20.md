@@ -9,7 +9,7 @@ This document provides the following information:
 Dargent offers the possibility to assign any (boxed) record type a custom layout describing how the data 
 should be mapped into memory.
 A record specified with a custom layout is compiled to a record
-with a single field consisting of an array of bytes.
+with a single field consisting of an array of bytes (more precisely, it is an array of words).
 This array **represents** the record: it contains enough information to retrieve
 the values of the fields. And indeed, when compiling a record with a custom layout, custom
 field getters are generated along (in C), retrieving the required field from the 
