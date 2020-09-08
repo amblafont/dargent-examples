@@ -75,7 +75,7 @@ access a (present) field
 of a
 sharable record.
 
-\paragraph{Critic} This typing rule does not match Liam's PhD thesis in two
+\paragraph{Critique} This typing rule does not match Liam's PhD thesis in two
 respects:
 \begin{itemize}
 \item it involves the sharable kind rather than discardable kind (although currently
@@ -100,10 +100,15 @@ Here are some ways of forbiding this, in the order of increasing required amount
   record\footnote{Although such types are constructible in the ICFP paper, no
     operation is available for them according to the ICFP paper, and
     they are not constructible with the implemented surface language.}.
-\item When the record is readonly, bang the return type of member
   \item Introduce a new kind $W$ for writable types, and forbids accessing a writable
     field of a readonly record.
 \end{enumerate}
+\begin{remark}
+ Another suggestion consists in banging the return type of member when the record is readonly.
+ However, Vincent is concerned that this does not match the bang supposed
+ behaviour, which might be problematic for future extensions.
+ I trust him.
+\end{remark}
 \subsection{Take}
     access a (present) field of a non-read-only record, with a continuation where
     the field is marked as taken. In the case the field is sharable,
@@ -126,7 +131,7 @@ Here are some ways of forbiding this, in the order of increasing required amount
       % \item Take could be allowed for sharable read-only records as well.
         \end{itemize}
         \end{remark}
-        \paragraph{Critic}
+        \paragraph{Critique}
         Member can be thought of as a simplified version of Take. Its status is
         not very clear, because in some specific case it is redundant with Take,
         and in others it is not.
