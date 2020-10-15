@@ -1,0 +1,11 @@
+type Easy = { aa : { cc : U8} layout record { cc : 1B } } layout record { aa : pointer at 0b }
+
+
+stupid : Easy -> Easy
+stupid (r {aa}) = r {aa}
+
+main : Easy -> Easy
+main (x { aa = m { cc }})  = x { aa = m { cc } }
+
+
+
