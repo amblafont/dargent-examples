@@ -32,7 +32,10 @@ position.
   Through the bang operation, it also involves read-only arrays of non-linear
   elements.
 \end{remark}
-
+\begin{remark}
+ Constant sized arrays can be (non-efficiently) copmiled to records. Accessing some symbolic index 
+ would be translated by explicitely pattern-matching on the value of the index.
+\end{remark}
 Here are the available operations for arrays:
 
 \begin{description}
