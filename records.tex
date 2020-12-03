@@ -53,6 +53,13 @@ More exactly, a record type has some permission if its mode has it and each
 (non-taken) field type has it (Cf. rule $\mathsf{KRec}$ of the ICFP paper).
 Banging $w$ yields $r$.
 
+\begin{remark}
+ The update static semantics (see rule $\text{RL}_2$ of the ICFP paper) relies on the
+ assumption that read-only records are always sharable, that is, their present
+ fields are always sharable. The update static semantics is thus laxer (i.e. it
+ types more).
+\end{remark}
+
 \subsection{Taken fields}
 In order to enforce linearity, the type system keeps track of which fields
 have been already taken in a record (in order to prevent accessing twice the
