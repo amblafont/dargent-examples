@@ -56,7 +56,7 @@ struct can_frame {
 
 # Challenges
 
-## Fixed-sized integers
+## 1. Fixed-sized integers
 
 Some MCPI2515 register contains a 4 bit long integer, called `dlc`
 This is the length of data in the frame. 
@@ -81,10 +81,10 @@ Alternatively, instead of adding these new types explicitely, primitive integer 
 be assigned smaller bitranges than they need. In this case, the setters and getters would perform
 the required truncation or upcasting.
 However, this would require to adapt the shallow embedding. Indeed, for the shallow embedding,
-getting and setting such a field should retrieve the set value, whereas the corresponding C behaviour
+getting and setting such a field would yield the set value, whereas the corresponding C behaviour
 would yield the truncated set value.
 
-## Unboxed layouts
+## 2. Unboxed layouts
 
 The C implementation of the function sending a given frame starts with allocating a 
 an array of bytes on the stack, that is later copied to the MCPI2515 registers.
@@ -104,8 +104,10 @@ the specification of the MCPI2515 registers.
 Allocate this buffer on the heap (via an external C function).
 The drawback is that allocating on the heap is costly.
 
-An alternative workaround consists in defining the buffer globally, but this
-may clash if concurrent calls are performed (however, is this really possible?
+Another possibility consists in defining the buffer globally, and using it
+somehow as a boxed data on the cogent side (by taking its address).
+This global variable solution may clash if concurrent calls are performed 
+(however, is this really possible?
 This should be discussed with system programmers).
 
 ### Cogent feature request
@@ -113,10 +115,10 @@ This should be discussed with system programmers).
 Implement dargent for unboxed records.
 One difficulty is that AutoCorres can't deal with taking the adress of a stack variable,
 so the generated setters and getters would require to copy the whole record at each call, which
-is highly ineffecient. Can this be solved by declaring such functions as inline?
+is highly inefficient. Can this be solved by declaring such functions as inline?
 
 
-## Copying an array
+## 3. Copying an array
 
 The C implementation of the above mentioned function `load_txb` copies the payload of 
 the given CAN frame in the above mentionned buffer `buf` using `memcpy`:
@@ -125,19 +127,20 @@ the given CAN frame in the above mentionned buffer `buf` using `memcpy`:
 	memcpy(buf + DAT, frame->data, frame->dlc);
 ```
 
-However, AutoCorres cannot deal with turning a stack array into a pointer
+However, AutoCorres cannot deal with turning a stack array into a pointer.
 
 ### Workaround
 
-The previous workarounds apply as well: allocating the buffer on the heap or turning it into
-a global variable makes this possible.
-An alternative possibility would be to implement this copy as a for loop, although
-memcpy is reputed to be more efficient in general.
+The previous workarounds apply as well: allocating the buffer on the heap,
+or turning it into a global variable make this possible.
 
+
+A final possibility would be to implement this copy as a for loop, although
+memcpy is reputed to be more efficient.
 
 ### Cogent feature request
 
-Although this does not solve the raised issue, such copy instruction from one array to another could be made
+Although this would not solve the raised issue, such copy instruction from one array to another could be made
 primitive in cogent.
 
 
