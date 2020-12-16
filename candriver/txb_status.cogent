@@ -1,0 +1,74 @@
+-- https://github.com/smaccm/smaccm/blob/master/models/Trusted_Build_Test/can/components/can/src/controller.c
+-- https://github.com/smaccm/smaccm/blob/master/models/Trusted_Build_Test/can/include/can_inf.h
+-- https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf
+-- p15
+
+-- the c suffix means cogent. the C suffix means C.
+-- the suffix i is for input
+-- the suffix o is for output
+-- the suffix b is for boxed
+-- the suffix t is for taken
+
+
+-- One example: txb_status in two versions
+
+type Status = < Lost | Err | Abort | Pending | Idle >
+
+type Status_b = { status : Status }
+
+type Status_bCi = Status_b 
+-- TODO layout
+
+-- abstract function, returns a boxed record because
+-- layouts cannot handle unboxed data
+mcp2515_read_reg_b : U32 -> Status_bCi
+
+
+
+-- from the enum can_txb_status
+idle : U32
+idle = 0
+
+pending : U32
+pending = 1
+
+lost : U32
+lost = 2
+
+err : U32
+err = 3
+
+abort : U32
+abort = 4
+
+
+
+-- this is the closest that we can do on the cogent side
+-- I am forced to return this Status_b for linearity reason
+txb_status : U32 -> (U32, Status_bCi take status)
+txb_status txb_idx = 
+   let r { status } = mcp2515_read_reg_b txb_idx in
+   let output =  status
+      | Lost -> lost
+      | Err -> err
+      | Abort -> abort
+      | Pending -> pending
+      | Idle -> idle
+   in
+    (output, r)
+    
+   
+type Status_bCo = Status_b 
+-- TODO layout
+
+-- An alternate possibility:
+-- have a layout for Status that returns
+-- the right number (lost, err, abort, pending)
+-- but this would require creating a fresh
+-- boxed structure to return
+txb_status_alt : (U32, Status_bCo take status) -> (Status_bCo, Status_bCi take status)
+txb_status_alt (txb_idx, out) = 
+   let r { status } = mcp2515_read_reg_b txb_idx in
+   (out { status = status }, r)
+
+

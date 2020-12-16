@@ -8,7 +8,12 @@ We base our discusssion on some C implementation found here
 - https://github.com/smaccm/smaccm/blob/master/models/Trusted_Build_Test/can/components/can/src/controller.c
 - https://github.com/smaccm/smaccm/blob/master/models/Trusted_Build_Test/can/include/can_inf.h
 
+The code there calls some functions such as `mcp2515_read_reg` where an implementation can be found at
+https://github.com/eclipse/upm/blob/master/src/mcp2515/mcp2515.c.
+Are these functions part of the driver as well?
+
 The driver supposedly manages a MCP2515 device, whose specification can be found at https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf.
+
 
 
 
