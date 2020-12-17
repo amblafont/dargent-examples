@@ -1,27 +1,73 @@
 This document lists some challenges that show up when writing a CAN driver in Cogent using
 dargent and native arrays. This shall be completed as I progress in the implementation.
 
-# C implementation
-
-We base our discusssion on some C implementation found here
-
-- https://github.com/smaccm/smaccm/blob/master/models/Trusted_Build_Test/can/components/can/src/controller.c
-- https://github.com/smaccm/smaccm/blob/master/models/Trusted_Build_Test/can/include/can_inf.h
-
-The code there calls some functions such as `mcp2515_read_reg` where an implementation can be found at
-https://github.com/eclipse/upm/blob/master/src/mcp2515/mcp2515.c.
-Are these functions part of the driver as well?
+The reason for focusing on the CAN driver is the recent exhuming of an old writeup 
+motivating dargent based on this example.
 
 The driver supposedly manages a MCP2515 device, whose specification can be found at https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf.
 
+# C implementation
 
+I tried to find the original source on which the above mentionned write-up 
+was based.  I looked for the mentioned function `txb_status` on github.
+I found two main matching repositories:
+
+1. https://github.com/loonwerks/formal-methods-workbench
+
+2. https://github.com/GaloisInc/tower-camkes-odroid
+
+The second one mentions sel4 on its front page. As we love sel4, the discussion will based on
+the implementation found in its subdirectory
+[data/can/components/can/](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can)
+
+
+# Structure of the driver
+
+## Layered architecture
+The old writeup focuses on some functions in the 
+[controller](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can/src/controller.c) file.
+Some involved C types are defined in the interface file
+ [data/can/components/can/include/can_inf.h](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can/include/can_inf.h)
+
+Another [C interface file](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can/include/mcp2515.h) exhibits a block of "SPI command functions" prefixed with `mcp2515_`, all implemented in
+[spi_cmd.c](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can/src/spi_cmd.c),
+ or a block of "MCP2515 functions", typically implemented in the controller file. My guess is that the former blcok is the low-level part of the driver.  
+For example, the MCP2515 function
+[`txb_status`](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can/src/controller.c#L500) calls [`mcp2515_read_reg`](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can/src/spi_cmd.c#L47)
+- [data/can/components/can/include/can_inf.h](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can/include/can_inf.h).
+Interestingly, this last function eventually relies on the SPI driver 
+(through the chain of calls
+[`mcp2515_read_reg`](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can/src/spi_cmd.c#L47)
+→
+[`spi_transfer`](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/can/components/spi/src/spi.c#L164)
+→ [`do_spi_transfer`](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/can/components/spi/src/spi.c#L140)
+→ [`spi_xfer`](https://github.com/seL4/util_libs/blob/835e96ac320469ddc72bab66c2f64199c993233f/libplatsupport/src/plat/tk1/spi.c#L251)).
+
+If we were to simulate the function pointer (which AutoCorres cannot deal with) that `spi_xfer` takes as an argument using a dispatch trick, then this CAN component must be compiled at the same time as the sel4 SPI driver.
+
+
+**Question**: are the SPI command functions mentioned above thought to be used by
+any "user", or can they be hidden? If they can be hidden, then it means that they could be
+written completely in cogent without anyone noticing.
+
+## Implemented Layer
+
+We now have multiple choices when it comes to implement part of the CAN driver in cogent:
+
+1. following the old write-up, we can focus on the high-level controller layer, assuming the lower layers are already implemented as they are in C;
+2. same, but we could also assume that the lower-level layers are implemented in a cogent-friendly manner (if not completely in cogent);
+3. Finally, we could try implementing the lower layers first (thus begging the question: can we use Louis'
+cogent implementation of the SPI driver?).
+
+In the following sections, I focus on the first route, the main reason being that I wrote them before becoming 
+aware of this layered architecture.
 
 
 # Layouts
 
-An older write-up motivating dargent proposed a layout for the CAN frame structure.
+The old write-up proposed a layout for the CAN frame structure.
 We explain below why we consider it more relevant to design a layout for the MCP2515 registers.
-The following arguments should be checked by discussing with a system programmer.
+The following arguments should be assessed by a system programmer.
 
 To implement a CAN driver, the system programmer needs to check the specification of the MCP2515 device.
 Then, he is free to design the interface of his choice that he wants to make available to
