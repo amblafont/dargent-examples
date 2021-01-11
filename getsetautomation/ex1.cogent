@@ -1,0 +1,28 @@
+type Example =
+    { field0 :  #{ field0 : U16
+                 , field1 :  { pointed : () }!
+                 , field2 :  #{ field0 :  #{ field0 : Bool }
+                              , field1 : U16
+                              , field2 : U16
+                              , field3 : < Con0 Bool >
+                              , field4 : Bool
+                              , field5 : Bool }
+                 , field3 : U16
+                 , field4 : U8
+                 , field5 : Bool }
+    , field1 :  { pointed : () }! } layout record { field0 : record { field0 : 16b at 107b
+                                                                    , field1 : pointer at 123b
+                                                                    , field2 : record { field0 : record { field0 : 1b at 155b }
+                                                                                      , field1 : 16b at 156b
+                                                                                      , field2 : 16b at 172b
+                                                                                      , field3 : variant (4b at 189b) { Con0 (0): 1b at 188b }
+                                                                                      , field4 : 1b at 193b
+                                                                                      , field5 : 1b at 194b }
+                                                                    , field3 : 32b at 195b
+                                                                    , field4 : 8b at 227b
+                                                                    , field5 : 1b at 235b }
+                                                  , field1 : pointer at 236b }
+
+main : Example -> Example
+main r { field0, field1 } =
+   r { field0, field1 }
