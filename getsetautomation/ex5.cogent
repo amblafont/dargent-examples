@@ -1,0 +1,64 @@
+type Example =
+    { field0 :  { pointed : () }!
+    , field1 : < Con0  #{ field0 : < Con0  #{ field0 : U8
+                                            , field1 : Bool } 
+                                   | Con1 Bool 
+                                   | Con2 Bool >
+                        , field1 :  #{ field0 : Bool }
+                        , field2 : U16
+                        , field3 : < Con0 Bool 
+                                   | Con1 Bool 
+                                   | Con2 Bool >
+                        , field4 : Bool } 
+               | Con1 U32 
+               | Con2 U16 
+               | Con3  #{ field0 : U16
+                        , field1 : Bool
+                        , field2 : Bool } 
+               | Con4 Bool >
+    , field2 : Bool
+    , field3 :  #{ field0 : U8
+                 , field1 : < Con0 Bool 
+                            | Con1 Bool 
+                            | Con2 Bool >
+                 , field2 : Bool
+                 , field3 : Bool
+                 , field4 : Bool }
+    , field4 : Bool } layout record { field0 : pointer at 178b
+                                    , field1 : variant (4b at 278b) { Con0 (0): record { field0 : variant (4b at 251b) { Con0 (0): record { field0 : 8b at 242b
+                                                                                                                                          , field1 : 1b at 250b }
+                                                                                                                       , Con1 (1): 1b at 250b
+                                                                                                                       , Con2 (2): 1b at 250b }
+                                                                                       , field1 : record { field0 : 1b at 255b }
+                                                                                       , field2 : 16b at 256b
+                                                                                       , field3 : variant (4b at 273b) { Con0 (0): 1b at 272b
+                                                                                                                       , Con1 (1): 1b at 272b
+                                                                                                                       , Con2 (2): 1b at 272b }
+                                                                                       , field4 : 1b at 277b }
+                                                                    , Con1 (1): 32b at 246b
+                                                                    , Con2 (2): 16b at 262b
+                                                                    , Con3 (3): record { field0 : 16b at 260b
+                                                                                       , field1 : 1b at 276b
+                                                                                       , field2 : 1b at 277b }
+                                                                    , Con4 (4): 1b at 277b }
+                                    , field2 : 1b at 282b
+                                    , field3 : record { field0 : 8b at 283b
+                                                      , field1 : variant (4b at 292b) { Con0 (0): 1b at 291b
+                                                                                      , Con1 (1): 1b at 291b
+                                                                                      , Con2 (2): 1b at 291b }
+                                                      , field2 : 1b at 296b
+                                                      , field3 : 1b at 297b
+                                                      , field4 : 1b at 298b }
+                                    , field4 : 1b at 299b }
+
+main : Example -> Example
+main r { field0
+       , field1
+       , field2
+       , field3
+       , field4 } =
+   r { field0
+     , field1
+     , field2
+     , field3
+     , field4 }

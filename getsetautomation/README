@@ -1,0 +1,3 @@
+For ex5, use ML ‹Feedback.verbosity_level := (0-1)› in the ACinstall file to prevent Isabelle from hanging
+(because of too much tracing)
+
