@@ -1,0 +1,64 @@
+type Example =
+    { field0 :  #{ field0 : < Con0 U16 
+                            | Con1 U8 
+                            | Con2 U16 
+                            | Con3 Bool >
+                 , field1 : U32
+                 , field2 : Bool
+                 , field3 : U8
+                 , field4 : Bool
+                 , field5 : Bool }
+    , field1 :  #{ field0 :  #{ field0 : Bool
+                              , field1 : U32
+                              , field2 : U64
+                              , field3 : U8
+                              , field4 :  #{ field0 :  #{ field0 : Bool
+                                                        , field1 :  #{ field0 : Bool } }
+                                           , field1 : Bool
+                                           , field2 : Bool
+                                           , field3 :  #{ field0 : Bool }
+                                           , field4 : Bool }
+                              , field5 :  #{ field0 : Bool } }
+                 , field1 : U8
+                 , field2 : U16
+                 , field3 : Bool }
+    , field2 : < Con0 U8 
+               | Con1 Bool 
+               | Con2 Bool >
+    , field3 : Bool } layout record { field0 : record { field0 : variant (4b at 103b) { Con0 (0): 16b at 87b
+                                                                                      , Con1 (1): 8b at 95b
+                                                                                      , Con2 (2): 16b at 87b
+                                                                                      , Con3 (3): 1b at 102b }
+                                                      , field1 : 32b at 107b
+                                                      , field2 : 1b at 139b
+                                                      , field3 : 8b at 140b
+                                                      , field4 : 1b at 148b
+                                                      , field5 : 1b at 149b }
+                                    , field1 : record { field0 : record { field0 : 1b at 150b
+                                                                        , field1 : 32b at 151b
+                                                                        , field2 : 64b at 183b
+                                                                        , field3 : 8b at 247b
+                                                                        , field4 : record { field0 : record { field0 : 1b at 255b
+                                                                                                            , field1 : record { field0 : 1b at 256b } }
+                                                                                          , field1 : 1b at 257b
+                                                                                          , field2 : 1b at 258b
+                                                                                          , field3 : record { field0 : 1b at 259b }
+                                                                                          , field4 : 1b at 260b }
+                                                                        , field5 : record { field0 : 1b at 261b } }
+                                                      , field1 : 8b at 262b
+                                                      , field2 : 16b at 270b
+                                                      , field3 : 1b at 286b }
+                                    , field2 : variant (4b at 295b) { Con0 (0): 8b at 287b
+                                                                    , Con1 (1): 1b at 294b
+                                                                    , Con2 (2): 1b at 294b }
+                                    , field3 : 1b at 299b }
+
+main : Example -> Example
+main r { field0
+       , field1
+       , field2
+       , field3 } =
+   r { field0
+     , field1
+     , field2
+     , field3 }
