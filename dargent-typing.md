@@ -7,16 +7,16 @@ Roughly, dargent affects the well-formed predicate on types (types with
 bad layouts will be rejected). The value or update semantics can be left
 unchanged.
 
-In a first section I explain what I call the **preservation property*** 
+In a first section I explain what I call the **preservation property** 
 that the type system loses when
 introducing dargent (at least as it is presented in the write-up).
 
 Here are the options that I consider:
-1. leave the formalisation of the type system for later (and rather focus on 
+1. leave the extension of the type system for future work (and rather focus on 
 writing a convincing example with Dargent): present Dargent
 as a way to control the C code generation, leaving everything else the same;
 2. leave layout polymorphism out of the formalisation;
-3. formalise the type system without the preservation property;
+3. formalise the type system without the preservation property (this is what my current first attempt is about);
 4. Try to figure out a type system keeping the preservation property
 (See the last subsection of the section about the failure of the preservation
 property, for a possible solution).
@@ -25,7 +25,7 @@ property, for a possible solution).
 # Failure of the preservation property
 
 One important property of the type system on which the formalisation heavily
-relies on is that if a type `τ` is well-formed, then so is any well-formed instantiation 
+relies is that if a type `τ` is well-formed, then so is any well-formed instantiation 
 `τ[t/α]`, where `α` is a type variable and `t` is a well-formed type. 
 
 
@@ -72,13 +72,13 @@ is always wellformed if `T` is. But this is not the case, for `ℓ` may overlap
 with some other layout. For example, consider `T = { a : Bool, b : Bool} layout
 {a : 1b at 0b, b : β} → … `. Then, `T[1b at 0b / β]` results in an illformed
 type `{ a : Bool, b : Bool} layout {a : 1b at 0b, b : 1b at 0b}`, although
-the constraint `1b at 0b ~ Bool` is satisified. 
+the constraint `1b at 0b ~ Bool` is satisfied. 
 
 ## Solution 2: constraints `l ~ t`
 
 Another solution is to allow constraints relating a layout and a type, even if
 none of them are variables. The overlapping problem in the example above
-disappears by introducing the constraint `{a : 1b at 0b, b : β} ~ {a : Bool, b : Bool}`.
+disappears by introducing the constraint `{a : 1b at 0b, b : β} ~ {a : Bool, b : Bool}`
 in C.
 
 
@@ -96,7 +96,7 @@ such as the one about preservation of typing for the value and update semantics
 
 In the polymorphic typing rule mentioned above, I add the premise that 
 `T[τ/α, l/β]` is well-formed. But then, do I need to keep the premise that
-`T` is well-formed?
+`T` is well-formed (not explicit in the above presentation, but present in the formalisation)?
 
 
 
