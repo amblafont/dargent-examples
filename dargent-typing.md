@@ -46,7 +46,7 @@ where
 ## A problematic example
 
 Consider now the example of a polymorphic function `f` of type `∀ α. C ⇒ 
-t layout { a : 1b at 0b} → …`. Then, `f U8 ` has type
+α layout { a : 1b at 0b} → …`. Then, `f U8 ` has type
 `U8 layout { a : 1b at 0b} → …` which obviously is ill-formed.
 But there is no constraint that we can think to put in `C` such that the 
 the check `Q ⊢ C[U8/t]` would not pass.
