@@ -1,0 +1,13 @@
+Bilby works on the bilby branch.
+It does not work anymore on commit 7f8b944c36d5e5b6b8dd3 
+
+It seems that the problem is the fsop_init function in the generated theory file CorresProof.
+The fsop.cogent file in this directory is a minimal version of the original file impl/fs/bilby/cogent/src/fsop.cogent
+that contains the function fsop_init  and its dependencies.
+
+Usage: replace the original fsop.cogent with this one, then 
+make verification in impl/fs/bilby/cogent, and checkAllRefine.sh
+
+When git bisecting to get the last working commit, beware that Isabelle will not reload the theory
+files if the haven't changed, although the generated C file that they parse has changed.
+To force a reload, one can remove the ACInstall cache heap somewhere under ~/.isabelle
