@@ -11,3 +11,6 @@ make verification in impl/fs/bilby/cogent, and checkAllRefine.sh
 When git bisecting to get the last working commit, beware that Isabelle will not reload the theory
 files if the haven't changed, although the generated C file that they parse has changed.
 To force a reload, one can remove the ACInstall cache heap somewhere under ~/.isabelle
+
+One could also use external_file so that Isabelle keeps track of the changes when deciding
+whether or not to reload
