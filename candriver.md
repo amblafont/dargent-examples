@@ -20,6 +20,8 @@ The second one mentions sel4 on its front page. As we love sel4, the discussion 
 the implementation found in its subdirectory
 [data/can/components/can/](https://github.com/GaloisInc/tower-camkes-odroid/blob/master/data/can/components/can)
 
+UPDATE 02/03/2021 Oliver Scott pointed me to this implementation:
+https://github.com/seL4/camkes-vm-examples/tree/master/apps/Arm/odroid_vm/components/can/src
 
 # Structure of the driver
 
@@ -44,6 +46,7 @@ Interestingly, this last function eventually relies on the SPI driver
 → [`spi_xfer`](https://github.com/seL4/util_libs/blob/835e96ac320469ddc72bab66c2f64199c993233f/libplatsupport/src/plat/tk1/spi.c#L251)).
 
 If we were to simulate the function pointer (which AutoCorres cannot deal with) that `spi_xfer` takes as an argument using a dispatch trick, then this CAN component must be compiled at the same time as the sel4 SPI driver.
+
 
 
 **Question**: are the SPI command functions mentioned above thought to be used by
