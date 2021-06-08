@@ -1,0 +1,199 @@
+-- https://github.com/smaccm/smaccm/blob/master/models/Trusted_Build_Test/can/components/can/src/controller.c
+-- https://github.com/smaccm/smaccm/blob/master/models/Trusted_Build_Test/can/include/can_inf.h
+-- https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf
+-- p15
+
+{-
+
+We propose to focus on the load_txb function
+
+https://github.com/seL4/camkes-vm-examples/blob/c5b54ace7a456be493e072111817f65d4ec625b1/apps/Arm/odroid_vm/components/can/src/controller.c#L382
+
+
+void load_txb(int txb_idx, struct can_frame *frame)
+{
+	uint32_t sid, eid;
+	uint8_t buf[MAX_BUF_LEN];
+
+	memset(buf, 0, MAX_BUF_LEN);
+
+	/* Separate standard ID and extended ID if extended frame */
+	if (frame->ident.exide) {
+		sid = frame->ident.id >> CAN_EID_BITS;
+		eid = frame->ident.id & CAN_EID_MASK;
+	} else {
+		sid = frame->ident.id;
+		eid = 0;
+	}
+
+	/* Convert CAN frame to transmit buffer form */
+	buf[SIDH] = sid >> SIDH_SHF;
+	buf[SIDL] = (sid << SIDL_SHF) | (frame->ident.exide << EXIDE_SHF) | (eid >> SIDL_EID_SHF);
+	buf[EID8] = eid >> EID8_SHF;
+	buf[EID0] = eid & BYTE_MASK;
+	buf[DLC] = (frame->ident.rtr << RTR_SHF) | frame->dlc;
+
+	/* Copy payload */
+	memcpy(buf + DAT, frame->data, frame->dlc);
+
+	/* Load to registers on the controller */
+	mcp2515_load_txb(buf, frame->dlc + DAT, txb_idx, 0);
+
+	/* Set TX buffer priority. */
+	mcp2515_write_reg(TXBCTRL(txb_idx), frame->prio);
+}
+
+The inner formatting can be exported into a separate function:
+
+void format(uint8_t * buf, struct can_frame *frame)
+{
+	uint32_t sid, eid;
+	/* Separate standard ID and extended ID if extended frame */
+	if (frame->ident.exide) {
+		sid = frame->ident.id >> CAN_EID_BITS;
+		eid = frame->ident.id & CAN_EID_MASK;
+	} else {
+		sid = frame->ident.id;
+		eid = 0;
+	}
+
+	/* Convert CAN frame to transmit buffer form */
+	buf[SIDH] = sid >> SIDH_SHF;
+	buf[SIDL] = (sid << SIDL_SHF) | (frame->ident.exide << EXIDE_SHF) | (eid >> SIDL_EID_SHF);
+	buf[EID8] = eid >> EID8_SHF;
+	buf[EID0] = eid & BYTE_MASK;
+	buf[DLC] = (frame->ident.rtr << RTR_SHF) | frame->dlc;
+}
+
+void load_txb(int txb_idx, struct can_frame *frame)
+{
+	uint8_t buf[MAX_BUF_LEN];
+	memset(buf, 0, MAX_BUF_LEN);
+        format(buf, can_frame);
+	/* Copy payload */
+	memcpy(buf + DAT, frame->data, frame->dlc);
+
+	/* Load to registers on the controller */
+	mcp2515_load_txb(buf, frame->dlc + DAT, txb_idx, 0);
+
+	/* Set TX buffer priority. */
+	mcp2515_write_reg(TXBCTRL(txb_idx), frame->prio);
+}
+
+What we propose in the following is showing how dargent simplifies implementing format function.
+
+A first caveat: the AutoCorres library could not parse such a C file because the fixed-size array `buf` is turned
+into a pointer when calling format. On the other hand, because dargent is not (yet) supported for unboxed types,
+the function format could not be inlined.
+
+A second caveat: Dargent currently only generates word arrays, not byte arrays, so there is a small discrepancy
+here (could be fixed later).
+
+-}
+-- because of linearity, format should return the buffer (but not the canframe, as
+-- it is readonly)
+format : (Buffer, CanFrame!) -> Buffer 
+format (buf, canFrame) =
+   buf {   sid = canFrame.ident.sid
+         , eid = canFrame.ident.eid
+         , exide = canFrame.ident.exide
+         , dlc = canFrame.dlc
+         , rtr = canFrame.ident.rtr
+       }  
+
+-- thanks to Dargent, when compiled this function will automatically 
+-- place the data at the right place in the buffer
+
+type Buffer = 
+   { sid : U11,
+     eid : U18,
+     exide : Bool,
+     rtr : Bool,
+     dlc : U4
+   } 
+-- for the layout we follow the specificaiton of the device
+-- see REGISTER 4-4
+-- https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf
+   layout record {
+     sid : 11b at 0b,
+     eid : 18b at 1B + 6b,
+     exide : 1b at 1B + 4b,
+     dlc: 4b at 4B + 4b,
+     rtr: 1b at 4B + 1b
+   }
+
+{-
+
+Now the can_frame structure, described here:
+https://github.com/seL4/camkes-vm-examples/blob/c5b54ace7a456be493e072111817f65d4ec625b1/apps/Arm/odroid_vm/include/can_inf.h#L34
+
+struct can_id {
+	uint32_t id:29;
+	uint32_t exide:1;
+	uint32_t rtr:1;
+	uint32_t err:1;
+};
+
+struct can_frame {
+	struct can_id ident;
+	uint8_t prio:2;
+	uint8_t dlc:4;
+	uint8_t data[CAN_MAX_DLC] __attribute__((aligned(8)));
+};
+
+To respect the bitfield specification, we can use dargent and 
+specify the layout that would correspond to this C structure
+(in the future, we could extend dargent so that it allows to
+compile to exactly such C structure with bitfield annotations)
+
+-}
+type CanId =
+  { -- we split the C id field into the standard id and the
+    -- extended one:
+    -- id   : U29
+    sid : U11
+  , eid : U18
+  , exide : Bool
+  , rtr   : Bool
+  , err   : Bool
+  } 
+
+type CanFrame =
+  { ident : #CanId
+  , prio  : U2
+  , dlc   : U4
+  , data  : Array8
+  } layout record
+  { ident : record
+               { sid  : 11b
+               , eid : 18b at 11b
+               , exide : 1b at 30b
+               , rtr : 1b at 31b
+               , err : 1b at 32b
+               }
+  , prio  : 2b at 8B
+  , dlc   : 4b at 8B + 2b
+  , data  : 32B at 8B + 6b
+  }
+
+              
+   
+
+
+
+-- this matches the C type uint8_t data[CAN_MAX_DLC]
+-- https://github.com/seL4/camkes-vm-examples/blob/c5b54ace7a456be493e072111817f65d4ec625b1/apps/Arm/odroid_vm/include/can_inf.h#L57
+
+type CArray8
+type CU4
+type CU2
+type CU11
+type CU18
+
+type Array8 = #CArray8
+type U2 = #CU2
+type U4 = #CU4
+type U11 = #CU11
+type U18 = #CU18
+
+
