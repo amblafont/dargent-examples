@@ -21,6 +21,8 @@ Timer E is a chronomoter while timer A is a countdown.
 */
 int meson_init(meson_timer_t *timer, meson_timer_config_t config)
 {
+    // This won't appear in the cogent code (we assume that
+    // we are given non null pointers
     if (timer == NULL || config.vaddr == NULL) {
         return EINVAL;
     }
@@ -32,6 +34,8 @@ To do: put these two lines in a separate function and write it in cogent with Da
 For linearity reasons, the cogent function would return the pointer timer->regs as well.
 */
 // This first line activates timer A and sets the time resolution for timers A 
+// in principle, timer->regs is volatile, but actually, timer->regs->mux behaves normally
+// except maybe for the unused bits.
     timer->regs->mux = TIMER_A_EN | (TIMESTAMP_TIMEBASE_1_US << TIMER_E_INPUT_CLK) 
        |          (TIMEOUT_TIMEBASE_1_MS << TIMER_A_INPUT_CLK);
  // timer_e is a volatile register: it is incremented at each tick automatically
