@@ -18,28 +18,21 @@ ns_in_us : U64
 ns_in_us = 1000
 
 
-type Mux = {
+type Meson_timer_reg = {
   timer_a_mode : Bool,
   timer_a_en : Bool,
   timer_a_input_clk : U2,
-  timer_e_input_clk : U3
- }
+  timer_e_input_clk : U3,
 
-layout LMux = record {
+-- actually this is also volatile
+-- it is a countdown that is decreased
+  timer_a : U32
+} layout record {
   timer_a_mode : 1b at 11b,
   timer_a_en : 1b at 15b,
   timer_a_input_clk : 2b at 0b,
-  timer_e_input_clk : 3b at 8b
-}
-
-type Meson_timer_reg = {
-     mux : # Mux,
--- actually this is also volatile
--- it is a countdown that is decreased
-     timer_a : U32
-} layout record {
-     mux : LMux,
-     timer_a : 4B at 4B
+  timer_e_input_clk : 3b at 8b,
+  timer_a : 4B at 4B
 } 
 
 get_timer_e : Meson_timer_reg! -> U32
@@ -57,24 +50,21 @@ type Meson_timer = {
 -- it avoids unboxed abstract type in meson_init
 type VAddr
 
--- isNullVAddr : VAddr! -> Bool
--- isNullTimer : Meson_timer! take (..) -> Bool
 -- (void *)((uintptr_t) config.vaddr + (TIMER_BASE + TIMER_REG_START * 4 - TIMER_MAP_BASE));
 config_get_regs : VAddr! -> Meson_timer_reg
 
 -- assume given non-null pointers?
 meson_init : (Meson_timer take regs, VAddr!) -> Meson_timer
 meson_init (timer, vaddr) =
-  let regs = config_get_regs vaddr in  
-  let mux = -- we don't touch the timer_a_mode mode
-            #{ timer_a_mode = regs.mux.timer_a_mode
-             , timer_a_en = True               
+  let regs = config_get_regs vaddr in 
+    timer { regs = 
+        set_timer_e (0,
+          regs { timer_a_en = True             
              , timer_a_input_clk = cast82 timeout_timebase_1_ms
              , timer_e_input_clk = cast83 timestamp_timebase_1_us
-             } ! regs
-  in
-  let regs2 = regs { mux } in
-    timer { regs = set_timer_e (0, regs2) }
+          })
+      }
+
 
 meson_get_time : Meson_timer ! -> U64
 meson_get_time timer =
@@ -91,23 +81,16 @@ meson_get_time timer =
 -- for linearity reason, this returns the timer
 meson_set_timeout : (Meson_timer, U16, Bool) -> Meson_timer
 meson_set_timeout (timer { regs }, timeout, periodic) =
-   -- not efficient...
-   let mux2 = regs.mux { timer_a_mode = periodic } ! regs
-   in   
-   let regs' = regs { mux = mux2, timer_a = upcast timeout } in
-       
-   if timer.disable ! timer then 
-       let mux' = regs'.mux { timer_a_en = True } ! regs' in
-       timer { regs = regs' { mux = mux' }, disable = False } 
+   let regs' = regs { timer_a_mode = periodic, timer_a = upcast timeout } in       
+   if timer.disable ! timer then        
+       timer { regs = regs' { timer_a_en = True }, disable = False } 
    else 
        timer { regs = regs' } 
 
 -- for linearity reason, this returns the timer
 meson_stop_timer : Meson_timer -> Meson_timer
 meson_stop_timer timer { regs } =
-   -- not efficient..
-   let mux' = regs.mux { timer_a_en = False } ! regs in
-   timer { regs = regs { mux = mux' },
+   timer { regs = regs { timer_a_en = False },
            disable = True }
 
 main : Meson_timer_reg -> Meson_timer_reg
