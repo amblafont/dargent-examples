@@ -213,6 +213,7 @@ the library, for any cogent program (in the sense of deep embedding).
 
 For a particular cogent program, the compiler generates a shallow and a deep embedding,
 with two proofs of correspondence:
+
 1. one between the isabelle program (shallow embedding) and the deep embedding
   with value semantics,
 2. one between the deep embedding with update semantics and the C program.
@@ -227,6 +228,7 @@ the C program and the Isabelle program, as desired.
 # Extending verification framework with Dargent
 
 First, let us list some components that we don't need to adapt for Dargent:
+
 - shallow and deep embedding;
 - value and update semantics (for the deep embedding)
 
@@ -241,6 +243,7 @@ in the update semantics correspond to a C call of such functions.
 
 In the following subsections, we discuss what changes were necessary to take Dargent
 into account:
+
 1. adapting the record lemmas, which are elementary correspondence statements about
 basic record operations (Take/Put/Member);
 2. adapting the value relation;
@@ -272,6 +275,7 @@ The adapted automatic proof of these new statements relies on some additionnal g
 ### Overview of the value relation
 The correspondence statement between the update semantics and the C code relies
 on the definition of a value relation, for each C type, between
+
 - a value, in the sense of the update semantics, and
 - an Isabelle term whose type represents the C type.
 <!-- Schematically, we denote this relation by `~ᵥ(T) : UpdateVal → T → bool`,  -->
@@ -335,6 +339,7 @@ getters.
 They gather enough evidence for the record lemmas to be successfuly proven.
 
 There are four types of get/set lemmas, schematically summarized as follows:
+
 1. `val_rel x v ⇒ val_rel x (get_a (set_a p v))` (this statement is explained below more carefully)
 2. `get_a ∘ set_b = get_a`
 3. `C_get = direct_get`

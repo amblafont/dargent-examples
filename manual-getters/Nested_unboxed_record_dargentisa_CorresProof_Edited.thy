@@ -182,7 +182,7 @@ fun all_corres_goals corres_tac typing_tree_of time_limit ctxt (tab : obligation
   in thm_tab end
 \<close>
 *)
-ML \<open> val thm_tab = all_corres_goals (corres_tac_local false) typing_tree_of 99999 @{context} prop_tab \<close>
+ML \<open> val thm_tab = all_corres_goals (corres_tac_local true) typing_tree_of 99999 @{context} prop_tab \<close>
 (* Resolve function calls recursively *)
 ML \<open>
 val finalised_thms =

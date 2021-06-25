@@ -32,7 +32,12 @@ type Meson_timer_reg = {
      timer_a : 4B at 4B,
      timer_e : 4B at 72B, -- 4*18,
      timer_e_hi : 4B at 76B
-} 
+}
+
+-- on the C side, set_timer_e only updates timer_e, but
+-- the timer_e_hi register would then be updated as well
+-- by the device
+set_timer_e : (U32, Meson_timer_reg) -> Meson_timer_reg
 
 type Meson_timer = { 
   -- ignoring volatile
@@ -51,12 +56,12 @@ config_get_regs : VAddr! -> Meson_timer_reg
 meson_init : (Meson_timer take regs, VAddr!) -> Meson_timer
 meson_init (timer, vaddr) =
   let regs = config_get_regs vaddr in 
-    timer { regs = 
+    timer { regs = set_timer_e (0, 
         regs { timer_a_en = True
-             , timer_e = 0
+             -- , timer_e = 0
              , timer_a_input_clk = cast82 timeout_timebase_1_ms
              , timer_e_input_clk = cast83 timestamp_timebase_1_us
-          }
+          })
       }
 
 meson_get_time : Meson_timer ! -> U64

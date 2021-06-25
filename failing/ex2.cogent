@@ -1,5 +1,8 @@
--- Currently, CorresSetup fails to devise the direct definition of
+-- - CorresSetup fails to devise the direct definition of
 -- the custom setter of field0 in this example
+--   + fixed
+-- - CorresSetup fails to prove the correspondence between he direct definition
+-- and the monadic one
 
 type Example =
     { field0 : < Con0 < Con0 < Con0 < Con0 U8 > 

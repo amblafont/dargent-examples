@@ -109,10 +109,6 @@ term deref_d3_get_aa
 end
 (* the value/type relation were adapted to custom layouts *)
 
-thm val_rel_t2_C_def
-thm type_rel_ptr_def
-term Ptr
-thm ptr_val_def
 
 context nested_boxed_dargentisa begin
 end
@@ -145,20 +141,8 @@ lemma d3_get_aa_def_alt[GetSetSimp] : "d3_get_aa' ptr = do _ <- guard (\<lambda>
 
 lemma t2_C_get_aa_set_aa[GetSetSimp] : "val_rel x v \<Longrightarrow> val_rel x (deref_d3_get_aa (deref_d9_set_aa b v))"
 
-  apply(simp add:deref_d3_get_aa_def deref_d9_set_aa_def)
-  apply(rule_tac P="val_rel x"  in back_subst )
-   apply assumption
-  
-  apply (cases v)
-  apply clarsimp
-  apply (thin_tac _)+  
-  apply word_bitwise
-  done
-
-lemma t2_C_get_aa_set_aa'[GetSetSimp] : "val_rel x v \<longrightarrow> val_rel x (deref_d3_get_aa (deref_d9_set_aa b v))"
-  apply (intro impI)
-  apply (rule t2_C_get_aa_set_aa)
-  by blast
+  apply(simp add:GetSetDefs)
+  by (tactic \<open>getput_variant_tac @{context} []\<close>)
 
 
 lemma d9_set_aa_def_alt[GetSetSimp] : "d9_set_aa' ptr v =
@@ -205,88 +189,8 @@ lemmas type_rel_simps[TypeRelSimp] =
   type_rel_unit_def
   type_rel_unit_t_C_def
   type_rel_bool_t_C_def
-lemma idiot : "(val_rel x v \<longrightarrow> val_rel x v')
-\<Longrightarrow> (val_rel x v \<Longrightarrow> val_rel x v')"
-  by blast
-(* non generated *)
-lemma corres_put_t2_C_aa_writable : "[] \<turnstile> \<Gamma>' \<leadsto> \<Gamma>x | \<Gamma>e \<Longrightarrow>
-\<Gamma>' ! x = Some (TRecord typ (Boxed Writable ptrl)) \<Longrightarrow>
-type_rel (type_repr (TRecord typ (Boxed Writable ptrl))) TYPE(t2_C ptr) \<Longrightarrow>
-val_rel (\<gamma> ! x) x' \<Longrightarrow>
-val_rel (\<gamma> ! v) v' \<Longrightarrow>
-\<Xi>', [], \<Gamma>' \<turnstile> Put (Var x) 0
-               (Var v) : TRecord (typ[0 := (fst (typ ! 0), fst (snd (typ ! 0)), Present)]) (Boxed Writable ptrl) \<Longrightarrow>
-length typ = 1 \<Longrightarrow> corres state_rel (Put (Var x) 0 (Var v)) (do ptr <- gets (\<lambda>_. x');
-  _ <- d9_set_aa' ptr v';
-  _ <- gets (\<lambda>_. ());
-  gets (\<lambda>_. ptr)
-                                                             od)
-                    \<xi>' \<gamma> \<Xi>' \<Gamma>' \<sigma> s "
-apply(tactic \<open>corres_put_boxed_tac @{context} 1\<close>)
-  ML_prf \<open>
-val ctxt = @{context}
-  val gets = Proof_Context.get_thms ctxt
-    val get  = Proof_Context.get_thm ctxt
-    val type_rels  = TypeRelSimp.get ctxt;
-    val val_rels   = ValRelSimp.get ctxt;
-    val is_valids  = IsValidSimp.get ctxt;
-    val heap_simps = HeapSimp.get ctxt;
-    val getset_simps = GetSetSimp.get ctxt;
-    val facts1 = get "val_rel_ptr_def" :: @{thms gets_to_return return_bind}
-    val facts2 = maps gets
-        ["state_rel_def", "heap_rel_def", "val_rel_ptr_def", "type_rel_ptr_def", "heap_rel_ptr_meta"]
-    val facts3 = facts2 @ is_valids @ heap_simps
-    fun trace str i t = (@{print tracing} str; @{print tracing} t; Seq.succeed t)
-\<close>
-  ML_prf \<open>
-val tac1 =  (* use the nice definition of the getter/setter (if custom layout) *)
-   simp_tac (ctxt addsimps (@{thm bind_assoc } ::getset_simps)) THEN'
-    (EVERY' [
-    asm_full_simp_tac ((put_simpset HOL_basic_ss ctxt) addsimps facts1),
-    REPEAT_ALL_NEW (etac @{thm exE}),
-    ((rtac (get "corres_put_boxed" |> Simplifier.rewrite_rule ctxt @{thms gets_to_return[THEN eq_reflection]})
-        THEN' simp_tac ctxt
-        THEN' atac THEN' atac THEN' atac)
-        THEN_ALL_NEW asm_full_simp_tac ctxt),
-    clarsimp_tac (ctxt addsimps facts3),
-    (rtac (get "u_t_p_recE") THEN' atac) THEN_ALL_NEW asm_full_simp_tac ctxt,
-    clarsimp_tac (ctxt addSDs (gets "type_repr_uval_repr")
-        addsimps type_rels),
-    (ftac (get "all_heap_rel_ptrD") THEN' atac)
-        THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps type_rels),
-    (* The following two lines are not in the ORELSE' branch
-       (that is the only difference between the two branches, with the nested ORELSE' branch)
-       TODO factorize
-     *)
-    clarsimp_tac ctxt
-(*,
-    REPEAT_ALL_NEW (rtac @{thm conjI})
-        THEN_ALL_NEW ((rtac (get "all_heap_rel_updE") THEN' atac THEN' atac)
-            THEN_ALL_NEW distinct_subgoal_tac
-            THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps getset_simps) 
-            THEN_ALL_NEW asm_simp_tac (ctxt addsimps val_rels @ type_rels)
-            THEN_ALL_NEW asm_simp_tac (ctxt addsimps @{thms map_update list_update_eq_id}
-                delsimps @{thms length_0_conv length_greater_0_conv})
-            THEN_ALL_NEW clarsimp_tac (ctxt addsimps val_rels @ type_rels)
-        )*)
-    ]  ) 
-\<close>
 
-  apply (tactic \<open>tac1 1\<close>)
-  apply (tactic \<open>  (REPEAT_ALL_NEW (rtac @{thm conjI}) 
-THEN_ALL_NEW ((rtac (get "all_heap_rel_updE") THEN' atac THEN' atac)
-  THEN_ALL_NEW distinct_subgoal_tac
-            THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps getset_simps) 
-(* ok *)
-(*  THEN_ALL_NEW asm_simp_tac (ctxt addsimps val_rels @ type_rels) *)
-      
-))
-1
-\<close>)
-  thm corres_def
-  term type_rel
-  thm state_rel_def[simplified heap_rel_def, simplified] heap_rel_ptr_def
-(* end of non generated *)
+
 
 (* Generating the specialised take and put lemmas *)
 

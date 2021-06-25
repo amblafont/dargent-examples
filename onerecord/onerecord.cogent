@@ -1,11 +1,10 @@
 
 type Easy =
-  { aa : U32, bb : U32 }
+  { aa : U32, bb : U8 }
     layout 
-      record { aa : 4B at 0B, bb : 4B at 4B }
+      record { aa : 32b at 31b, bb : 1B at 63b }
 
 
-proj_aa : Easy! -> U32
-proj_aa easy = easy.aa
 
-
+proj_aa : Easy -> Easy
+proj_aa (r {aa,bb}) = r {aa,bb}

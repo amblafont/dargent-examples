@@ -11,7 +11,7 @@ begin
 definition
   abbreviatedType1 :: " Cogent.type"
 where
-  "abbreviatedType1 \<equiv> TRecord [(''a'', (TSum [(''A'', (TPrim (Num U8), Unchecked))], Present)), (''b'', (TSum [(''A'', (TPrim (Num U8), Unchecked)), (''B'', (TPrim (Num U16), Unchecked)), (''C'', (TPrim (Num U32), Unchecked)), (''D'', (TPrim (Num U64), Unchecked)), (''E'', (TPrim Bool, Unchecked))], Present))] (Boxed Writable undefined)"
+  "abbreviatedType1 \<equiv> TRecord [(''a'', (TSum [(''A'', (TPrim (Num U8), Unchecked))], Present)), (''b'', (TSum [(''A'', (TPrim (Num U8), Unchecked)), (''B'', (TPrim (Num U16), Unchecked)), (''C'', (TPrim (Num U32), Unchecked)), (''D'', (TPrim (Num U64), Unchecked)), (''E'', (TPrim Bool, Unchecked))], Present))] (Boxed Writable)"
 
 definition
   abbreviatedType2 :: " Cogent.type"
@@ -26,7 +26,7 @@ where
 definition
   abbreviatedType4 :: " Cogent.type"
 where
-  "abbreviatedType4 \<equiv> TRecord [(''a'', (abbreviatedType3, Taken)), (''b'', (abbreviatedType2, Taken))] (Boxed Writable undefined)"
+  "abbreviatedType4 \<equiv> TRecord [(''a'', (abbreviatedType3, Taken)), (''b'', (abbreviatedType2, Taken))] (Boxed Writable)"
 
 definition
   abbreviatedType5 :: " Cogent.type"
@@ -41,7 +41,7 @@ where
 definition
   abbreviatedType7 :: " Cogent.type"
 where
-  "abbreviatedType7 \<equiv> TRecord [(''a'', (abbreviatedType3, Present)), (''b'', (abbreviatedType2, Present))] (Boxed Writable undefined)"
+  "abbreviatedType7 \<equiv> TRecord [(''a'', (abbreviatedType3, Present)), (''b'', (abbreviatedType2, Present))] (Boxed Writable)"
 
 lemmas abbreviated_type_defs =
   abbreviatedType3_def
@@ -86,10 +86,10 @@ definition
   "\<xi> \<equiv> assoc_lookup []"
 
 definition
-  "getVals_typetree \<equiv> TyTrSplit (Cons (Some TSK_L) []) [] TyTrLeaf [Some abbreviatedType3, Some (TRecord [(''a'', (abbreviatedType3, Taken)), (''b'', (abbreviatedType2, Present))] (Boxed Writable undefined))] (TyTrSplit (Cons (Some TSK_R) (Cons (Some TSK_L) (Cons None []))) [] TyTrLeaf [Some abbreviatedType2, Some abbreviatedType4] (TyTrSplit (Cons (Some TSK_L) (Cons (Some TSK_NS) (Cons (Some TSK_L) (append (replicate 2 None) [])))) [] TyTrLeaf [Some abbreviatedType6] TyTrLeaf))"
+  "getVals_typetree \<equiv> TyTrSplit (Cons (Some TSK_L) []) [] TyTrLeaf [Some abbreviatedType3, Some (TRecord [(''a'', (abbreviatedType3, Taken)), (''b'', (abbreviatedType2, Present))] (Boxed Writable))] (TyTrSplit (Cons (Some TSK_R) (Cons (Some TSK_L) (Cons None []))) [] TyTrLeaf [Some abbreviatedType2, Some abbreviatedType4] (TyTrSplit (Cons (Some TSK_L) (Cons (Some TSK_NS) (Cons (Some TSK_L) (append (replicate 2 None) [])))) [] TyTrLeaf [Some abbreviatedType6] TyTrLeaf))"
 
 definition
-  "putVals_typetree \<equiv> TyTrSplit (Cons (Some TSK_L) []) [] TyTrLeaf [Some abbreviatedType4] (TyTrSplit (Cons (Some TSK_R) (Cons None [])) [] TyTrLeaf [Some (TPrim (Num U8))] (TyTrSplit (Cons (Some TSK_L) (Cons (Some TSK_R) (Cons None []))) [] TyTrLeaf [Some abbreviatedType3] (TyTrSplit (Cons (Some TSK_L) (Cons None (Cons (Some TSK_L) (Cons None [])))) [] TyTrLeaf [Some (TRecord [(''a'', (abbreviatedType3, Present)), (''b'', (abbreviatedType2, Taken))] (Boxed Writable undefined))] (TyTrSplit (Cons (Some TSK_R) (append (replicate 4 None) [])) [] TyTrLeaf [Some (TPrim (Num U32))] (TyTrSplit (Cons (Some TSK_L) (Cons (Some TSK_R) (append (replicate 4 None) []))) [] TyTrLeaf [Some (TSum [(''A'', (TPrim (Num U8), Checked)), (''B'', (TPrim (Num U16), Checked)), (''C'', (TPrim (Num U32), Unchecked)), (''D'', (TPrim (Num U64), Checked)), (''E'', (TPrim Bool, Checked))])] (TyTrSplit (Cons (Some TSK_L) (Cons None (Cons (Some TSK_R) (append (replicate 4 None) [])))) [] TyTrLeaf [Some abbreviatedType2] TyTrLeaf))))))"
+  "putVals_typetree \<equiv> TyTrSplit (Cons (Some TSK_L) []) [] TyTrLeaf [Some abbreviatedType4] (TyTrSplit (Cons (Some TSK_R) (Cons None [])) [] TyTrLeaf [Some (TPrim (Num U8))] (TyTrSplit (Cons (Some TSK_L) (Cons (Some TSK_R) (Cons None []))) [] TyTrLeaf [Some abbreviatedType3] (TyTrSplit (Cons (Some TSK_L) (Cons None (Cons (Some TSK_L) (Cons None [])))) [] TyTrLeaf [Some (TRecord [(''a'', (abbreviatedType3, Present)), (''b'', (abbreviatedType2, Taken))] (Boxed Writable))] (TyTrSplit (Cons (Some TSK_R) (append (replicate 4 None) [])) [] TyTrLeaf [Some (TPrim (Num U32))] (TyTrSplit (Cons (Some TSK_L) (Cons (Some TSK_R) (append (replicate 4 None) []))) [] TyTrLeaf [Some (TSum [(''A'', (TPrim (Num U8), Checked)), (''B'', (TPrim (Num U16), Checked)), (''C'', (TPrim (Num U32), Unchecked)), (''D'', (TPrim (Num U64), Checked)), (''E'', (TPrim Bool, Checked))])] (TyTrSplit (Cons (Some TSK_L) (Cons None (Cons (Some TSK_R) (append (replicate 4 None) [])))) [] TyTrLeaf [Some abbreviatedType2] TyTrLeaf))))))"
 
 ML \<open> open TTyping_Tactics \<close>
 
@@ -124,7 +124,7 @@ val typing_helper_3_script : tac list = [
 
 
 lemma typing_helper_3[unfolded abbreviated_type_defs] :
-  "kinding [] (TRecord [(''a'', (abbreviatedType3, Taken)), (''b'', (abbreviatedType2, Present))] (Boxed Writable undefined)) {E}"
+  "kinding [] (TRecord [(''a'', (abbreviatedType3, Taken)), (''b'', (abbreviatedType2, Present))] (Boxed Writable)) {E}"
   apply (unfold abbreviated_type_defs)?
   apply (tactic \<open> map (fn t => DETERM (interpret_tac t @{context} 1)) typing_helper_3_script |> EVERY \<close>)
   done
@@ -160,7 +160,7 @@ val typing_helper_6_script : tac list = [
 
 
 lemma typing_helper_6[unfolded abbreviated_type_defs] :
-  "kinding [] (TRecord [(''a'', (abbreviatedType3, Taken)), (''b'', (abbreviatedType2, Taken))] (Boxed ReadOnly undefined)) {S, D}"
+  "kinding [] (TRecord [(''a'', (abbreviatedType3, Taken)), (''b'', (abbreviatedType2, Taken))] (Boxed ReadOnly)) {S, D}"
   apply (unfold abbreviated_type_defs)?
   apply (tactic \<open> map (fn t => DETERM (interpret_tac t @{context} 1)) typing_helper_6_script |> EVERY \<close>)
   done
@@ -208,7 +208,7 @@ val typing_helper_10_script : tac list = [
 
 
 lemma typing_helper_10[unfolded abbreviated_type_defs] :
-  "kinding [] (TRecord [(''a'', (abbreviatedType3, Present)), (''b'', (abbreviatedType2, Taken))] (Boxed Writable undefined)) {E}"
+  "kinding [] (TRecord [(''a'', (abbreviatedType3, Present)), (''b'', (abbreviatedType2, Taken))] (Boxed Writable)) {E}"
   apply (unfold abbreviated_type_defs)?
   apply (tactic \<open> map (fn t => DETERM (interpret_tac t @{context} 1)) typing_helper_10_script |> EVERY \<close>)
   done
@@ -280,7 +280,7 @@ val typing_helper_16_script : tac list = [
 
 
 lemma typing_helper_16[unfolded abbreviated_type_defs] :
-  "type_wellformed 0 (TRecord [(''a'', (abbreviatedType3, Present)), (''b'', (abbreviatedType2, Taken))] (Boxed Writable undefined))"
+  "type_wellformed 0 (TRecord [(''a'', (abbreviatedType3, Present)), (''b'', (abbreviatedType2, Taken))] (Boxed Writable))"
   apply (unfold abbreviated_type_defs)?
   apply (tactic \<open> map (fn t => DETERM (interpret_tac t @{context} 1)) typing_helper_16_script |> EVERY \<close>)
   done

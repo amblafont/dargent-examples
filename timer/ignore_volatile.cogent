@@ -18,20 +18,6 @@ ns_in_us : U64
 ns_in_us = 1000
 
 
-type Mux = {
-  timer_a_mode : Bool,
-  timer_a_en : Bool,
-  timer_a_input_clk : U2,
-  timer_e_input_clk : U3
- }
-
-layout LMux = record {
-  timer_a_mode : 1b at 11b,
-  timer_a_en : 1b at 15b,
-  timer_a_input_clk : 2b at 0b,
-  timer_e_input_clk : 3b at 8b
-}
-
 type Meson_timer_reg = {
    timer_a_mode : Bool,
    timer_a_en : Bool,

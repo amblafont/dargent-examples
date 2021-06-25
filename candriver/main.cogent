@@ -94,12 +94,21 @@ here (could be fixed later).
 -- it is readonly)
 format : (Buffer, CanFrame!) -> Buffer 
 format (buf, canFrame) =
-   buf {   sid = canFrame.ident.sid
-         , eid = canFrame.ident.eid
-         , exide = canFrame.ident.exide
-         , dlc = canFrame.dlc
-         , rtr = canFrame.ident.rtr
-       }  
+   canFrame.ident.id
+       | Standard r -> 
+          buf {   sid = r.sid
+                , eid = cast32_18 0
+                , exide = False
+                , dlc = canFrame.dlc
+                , rtr = canFrame.ident.rtr
+              }  
+       | Extended r -> 
+          buf {   sid = r.sid
+                , eid = r.eid
+                , exide = True
+                , dlc = canFrame.dlc
+                , rtr = canFrame.ident.rtr
+              }  
 
 -- thanks to Dargent, when compiled this function will automatically 
 -- place the data at the right place in the buffer
@@ -111,7 +120,7 @@ type Buffer =
      rtr : Bool,
      dlc : U4
    } 
--- for the layout we follow the specificaiton of the device
+-- for the layout we follow the specification of the device
 -- see REGISTER 4-4
 -- https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf
    layout record {
@@ -150,13 +159,17 @@ compile to exactly such C structure with bitfield annotations)
 type CanId =
   { -- we split the C id field into the standard id and the
     -- extended one:
-    -- id   : U29
-    sid : U11
-  , eid : U18
-  , exide : Bool
+    id    : < Standard #{ sid : U11 } | Extended #{ sid : U11, eid : U18 } >
   , rtr   : Bool
   , err   : Bool
   } 
+
+{-
+type Id = <Std #U11 | Ext #U29>
+layout LId = variant (1b at 29b) < Std(0): 11b | Ext(1): 29b >
+type CanId = {id : Id, rtr : Bool, err : Bool}
+layout LCanId = record { id : LId, rtr : 1b at 30b, err : 1b at 31b } 
+-}
 
 type CanFrame =
   { ident : #CanId
@@ -165,9 +178,12 @@ type CanFrame =
   , data  : Array8
   } layout record
   { ident : record
-               { sid  : 11b
-               , eid : 18b at 11b
-               , exide : 1b at 30b
+               { -- sid  : 11b
+                 id : variant (1b at 29b)
+                     { Standard(0): record { sid : 11b} , 
+                       Extended(1): record { eid: 18b, sid : 11b at 18b } }
+               -- , eid : 18b at 11b
+               -- , exide : 1b at 30b
                , rtr : 1b at 31b
                , err : 1b at 32b
                }
@@ -195,5 +211,7 @@ type U2 = #CU2
 type U4 = #CU4
 type U11 = #CU11
 type U18 = #CU18
+
+cast32_18 : U32 -> U18
 
 

@@ -1,5 +1,6 @@
-Bilby works on the bilby branch.
+Bilby works on the bilby branch, and even on 9bbb5c94.
 It does not work anymore on commit 7f8b944c36d5e5b6b8dd3 
+even on commit e9edc2e8
 
 It seems that the problem is the fsop_init function in the generated theory file CorresProof.
 The fsop.cogent file in this directory is a minimal version of the original file impl/fs/bilby/cogent/src/fsop.cogent
@@ -14,3 +15,5 @@ To force a reload, one can remove the ACInstall cache heap somewhere under ~/.is
 
 One could also use external_file so that Isabelle keeps track of the changes when deciding
 whether or not to reload
+
+

@@ -70,6 +70,18 @@ The simplified definitions are thought to be used later when proving that
 the C and isabelle custom getters/setters match.
 
  *)
+context variant_dargentisa begin
+ML \<open>
+val filename = "variant_dargentisa.c"
+val thy = @{theory}
+
+\<close>
+ML \<open>
+val heap_info = (Symtab.lookup (HeapInfo.get thy) 
+     filename |> the  |> #heap_info)
+\<close>
+ML \<open>#heap_getters heap_info\<close>
+end
 
 
 setup \<open>generate_isa_getset_records_for_file "variant_dargentisa.c" @{locale variant_dargentisa} \<close>
@@ -103,6 +115,8 @@ end
 (* the value/type relation were adapted to custom layouts *)
 local_setup \<open> local_setup_val_rel_type_rel_put_them_in_buckets "variant_dargentisa.c" \<close>
 thm val_rel_t1_C_def
+thm type_rel_t1_C_def
+term val_rel
 
 (* 
 Now are the various lemmas regarding custom getter/setters. We call them get/set lemmas
@@ -201,10 +215,9 @@ lemma tags_distinct':
   "TAG_ENUM_C \<noteq> TAG_ENUM_D"
   "TAG_ENUM_C \<noteq> TAG_ENUM_E"
   "TAG_ENUM_D \<noteq> TAG_ENUM_E"
-  by (simp add: TAG_ENUM_A_def TAG_ENUM_B_def TAG_ENUM_C_def TAG_ENUM_D_def TAG_ENUM_E_def)+
+  by (simp add: tag_t_defs)+
 
 lemmas tags_distinct = tags_distinct' tags_distinct'[symmetric]
-
 
 
 lemma get_set_b[GetSetSimp]: "val_rel x v \<Longrightarrow> val_rel x (deref_d9_get_b (deref_d32_set_b b v))"
@@ -325,6 +338,7 @@ lemmas type_rel_simps[TypeRelSimp] =
 (* Generating the specialised take and put lemmas *)
 
 local_setup \<open> local_setup_take_put_member_case_esac_specialised_lemmas "variant_dargentisa.c" \<close>
+thm corres_esacs
 local_setup \<open> fold tidy_C_fun_def' Cogent_functions \<close>
 
 end (* of locale *)

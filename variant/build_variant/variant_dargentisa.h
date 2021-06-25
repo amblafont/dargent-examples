@@ -40,17 +40,14 @@ typedef untyped_func_enum t49;
 }
 typedef struct t1 t1;
 typedef struct t2 t2;
-typedef struct t8 t8;
+typedef struct t3 t3;
 typedef struct t25 t25;
 typedef struct t26 t26;
 struct t1 {
-    unsigned int data[5U];
-} ;
-struct t2 {
     tag_t tag;
     u8 A;
 } ;
-struct t8 {
+struct t2 {
     tag_t tag;
     u8 A;
     u16 B;
@@ -58,29 +55,32 @@ struct t8 {
     u64 D;
     bool_t E;
 } ;
+struct t3 {
+    unsigned int data[5U];
+} ;
 struct t25 {
-    t2 a;
-    t8 b;
+    t1 a;
+    t2 b;
 } ;
 struct t26 {
-    t1 *p1;
+    t3 *p1;
     t25 p2;
 } ;
-static inline t26 getVals(t1 *);
-static inline t1 *putVals(t1 *);
-static inline t1 *dispatch_t48(untyped_func_enum a2, t1 *a3)
+static inline t26 getVals(t3 *);
+static inline t3 *putVals(t3 *);
+static inline t3 *dispatch_t48(untyped_func_enum a2, t3 *a3)
 {
     return putVals(a3);
 }
-static inline t26 dispatch_t49(untyped_func_enum a2, t1 *a3)
+static inline t26 dispatch_t49(untyped_func_enum a2, t3 *a3)
 {
     return getVals(a3);
 }
-typedef t1 Simple;
-typedef t1 *getVals_arg;
+typedef t3 Simple;
+typedef t3 *getVals_arg;
 typedef t26 getVals_ret;
-typedef t1 *putVals_arg;
-typedef t1 *putVals_ret;
+typedef t3 *putVals_arg;
+typedef t3 *putVals_ret;
 #endif
 
 

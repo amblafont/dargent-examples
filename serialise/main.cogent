@@ -1,11 +1,16 @@
 type Msg = { a : U8, b : U8 }
+-- what about a primitive cast operation between
+-- Msg layout L1 -> Msg layout l2?
+
 
 layout L1 = record { a : 1B at 1b, b : 1B at 9b }
-layout L2 = record { a : 1B at 2B, b : 1B at 3b }
+layout L2 = record { b : 1B at 1b, a : 1B at 9b }
+-- layout L2 = record { a : 1B at 2B, b : 1B at 3b }
 
 -- FFI C function that allocates a message
 allocMsg : () -> Msg layout L2
 
+-- in place cast?
 changeLayout :  Msg! layout L1 -> Msg layout L2
 changeLayout r = 
    let p {a, b} = allocMsg () in
@@ -17,3 +22,6 @@ changeLayout r =
 -- this is to force the generation of setters for the L1 layout
 idL1 : Msg layout L1 -> Msg layout L1
 idL1 r {a, b} = r {a, b}
+
+-- two FFI functions layout L1 
+-- no glue code

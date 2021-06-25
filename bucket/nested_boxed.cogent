@@ -1,7 +1,7 @@
 type Easy =
   { aa : { cc : U8} }
     layout 
-      record { aa : pointer at 1B }  at 0B
+      record { aa : 8B at 1B }  at 0B
 
 
 stupid : Easy -> Easy

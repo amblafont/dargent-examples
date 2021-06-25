@@ -10,14 +10,49 @@ fun curry_T0 :: "(('a, 'b, 'c) T0 \<Rightarrow> 'z) \<Rightarrow> ('a \<Rightarr
 fun curry_T3 :: "(('a, 'b) T1 \<Rightarrow> 'c) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c)" where
   "curry_T3 f a b = f (\<lparr> T1.p1\<^sub>f = a, p2\<^sub>f = b \<rparr>)"
 
-axiomatization
-  where cast82_def:"cast82 x = x && 0b11"
-   and  cast83_def:"cast83 x = x && 0b111"
+(*
+definition chooses :: "'a set \<Rightarrow> 'a"
+  where "chooses X = (SOME x. (x \<in> X))"
 
+lemma "chooses x = chooses x"
+  by simp
+lemma "undefined = undefined"
+  
+  by simp
+term "(\<lambda>x. y)(a\<^sub>1 := True, a\<^sub>2 := True)"
+lemma some1_equality: "\<exists>x. P x \<Longrightarrow> P a \<Longrightarrow> (SOME x. P x) = a"
+  quickcheck nitpick
+  sorry
+thm some1_equality[o
 
+typedecl  P
+typedecl volatile_seed
+consts get_a :: " P \<Rightarrow> nat \<Rightarrow> bool"
+consts get_a :: " P \<Rightarrow> nat set"
+consts get_a :: "(volatile_seed \<Rightarrow> P \<Rightarrow> nat \<times> volatile_seed)"
+term "obtains"
+
+definition test_something :: "P \<Rightarrow> nat"
+  where "test_something x = 
+    (if chooses (get_a) x = chooses (get_a) x then
+0 else 1)"
+lemma idontwant : "test_something p = 0"
+  apply(simp add:test_something_def)
+  done
+
+lemma "(let y = chooses x in y) = chooses x"
+  by simp
+*)
 
 type_synonym concr_device_state = "(bool, bool, 8 word, 8 word, 32 word, 32 word, 32 word) Meson_timer_reg"
 type_synonym concr_state = "(concr_device_state, bool) Meson_timer"
+
+axiomatization
+  where cast82_def:"cast82 x = x"
+   and  cast83_def:"cast83 x = x"
+   and  set_timer_e_def :"set_timer_e (T1.make n reg) =
+      reg \<lparr> timer_e_hi\<^sub>f := 0, timer_e\<^sub>f := 0 \<rparr>
+     "
 
 definition concr_driver :: "(concr_state, VAddr, 64 word, 16 word, bool) driver"
   where
@@ -35,6 +70,8 @@ definition concr_driver :: "(concr_state, VAddr, 64 word, 16 word, bool) driver"
 locale concr_is_refinement = 
   is_refinement concr_driver mor
   for mor :: "(concr_state, VAddr, 64 word, 16 word, bool) driver_abstr"
+
+  
 
 definition \<alpha>timeout_timebase :: "nat \<Rightarrow> timeout_timebase"
   where 
@@ -59,7 +96,7 @@ definition \<alpha>timestamp_timebase :: "nat \<Rightarrow> timestamp_timebase"
 
 definition \<alpha>_timer_mode :: "bool \<Rightarrow> timer_mode"
   where "\<alpha>_timer_mode b = (if b then Periodic else NotPeriodic)"
-term word_cat
+
 definition \<alpha>_reg :: "concr_device_state \<Rightarrow> device_state" where
 "\<alpha>_reg ds = 
     \<lparr> timer_a_mode = \<alpha>_timer_mode (timer_a_mode\<^sub>f ds) ,
@@ -147,15 +184,13 @@ interpretation concr_implementation:
      apply simp
 
 
-apply (simp add:simp_defs meson_init_def meson_get_time_def ns_in_us_def)
+    apply (simp add:simp_defs meson_init_def meson_get_time_def ns_in_us_def
+  set_timer_e_def)
      apply(case_tac s, rename_tac regs disable, case_tac regs)
     apply(simp add: take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def cast82_def cast83_def)
      (* hmm *)
-     apply clarsimp
-(* it should work because setting 
-the lower register should set the higher register
-*)
-  defer
+    apply clarsimp
+  apply(simp add:word_cat_def)
 
 (* yeah! *)
      apply (simp add:simp_defs meson_stop_timer_def  ns_in_us_def take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def)
@@ -163,7 +198,14 @@ the lower register should set the higher register
   
     
     apply(simp add:simp_defs  meson_set_timeout_def  take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def Let\<^sub>d\<^sub>s_def)
-    apply(simp add:unat_ucast_up)
-  sorry
+     apply(simp add:unat_ucast_up)
+
+(* invariants *)
+    apply(simp add:simp_defs meson_init_def take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def Let\<^sub>d\<^sub>s_def set_timer_e_def)
+   apply(simp add:simp_defs  meson_stop_timer_def  ns_in_us_def take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def)
+  apply(simp add:simp_defs  meson_set_timeout_def  take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def Let\<^sub>d\<^sub>s_def)
+  
+  by(simp add: HOL.Let_def )
+  
 
 end

@@ -3,7 +3,7 @@ theory TimerSpec
 begin
 
 record ('s, 'reg, 'time, 'timeout, 'timer_mode) driver =
-   get_time :: "'s \<Rightarrow> 'time"
+   get_time :: "'s \<Rightarrow> 'time" 
    init :: "'s \<Rightarrow> 'reg \<Rightarrow> 's"
    stop_timer :: "'s \<Rightarrow> 's"
    set_timeout :: "'s \<Rightarrow> 'timeout \<Rightarrow> 'timer_mode \<Rightarrow> 's"
@@ -11,6 +11,14 @@ record ('s, 'reg, 'time, 'timeout, 'timer_mode) driver =
       and we want to avoid this
     *)
    stateInv :: "'s \<Rightarrow> bool"
+
+locale dataInvariant =
+  fixes dr ::  "('s1, 'r1, 't1, 'to1, 'tm1) driver"  
+  assumes initDI : "stateInv dr (init dr init_s init_r)"
+  assumes stop_timerDI :  "stateInv dr s \<Longrightarrow> stateInv dr (stop_timer dr s)"
+  assumes set_timeoutDI : "stateInv dr s \<Longrightarrow> stateInv dr (set_timeout dr s to tm)"
+
+  
 
 record ('s1, 'r1, 't1, 'to1, 'tm1, 
         's2, 'r2, 't2, 'to2, 'tm2) 
@@ -21,6 +29,8 @@ record ('s1, 'r1, 't1, 'to1, 'tm1,
   mor_timeout :: "'to1 \<Rightarrow> 'to2" ("\<alpha>timeout\<index>")
   mor_timer_mode :: "'tm1  \<Rightarrow> 'tm2" ("\<alpha>timermode\<index>")
 
+
+
 locale driver_morphism_laws =  
 
 
@@ -28,7 +38,7 @@ locale driver_morphism_laws =
   fixes dr2 :: "('s2, 'r2, 't2, 'to2, 'tm2) driver" 
   fixes mor :: "('s1, 'r1, 't1, 'to1, 'tm1, 
                  's2, 'r2, 't2, 'to2, 'tm2) driver_morphism_rec"   (structure) 
-  assumes \<alpha>get_time : "stateInv dr1 s \<Longrightarrow> get_time dr2 (\<alpha> s) = \<alpha>time (get_time dr1 s)"
+  assumes \<alpha>get_time : "\<And> s. stateInv dr1 s \<Longrightarrow> get_time dr2 (\<alpha> s) = \<alpha>time (get_time dr1 s)"
   assumes \<alpha>init : "init dr2 (\<alpha> s) (\<alpha>reg r) = \<alpha> (init dr1 s r)"
   assumes \<alpha>stop_timer : "stop_timer dr2 (\<alpha> s) = \<alpha> (stop_timer dr1 s)"
   assumes \<alpha>set_timeout : "   set_timeout dr2 (\<alpha> s) (\<alpha>timeout to) (\<alpha>timermode tm) = \<alpha> (set_timeout dr1 s to tm)"
@@ -106,12 +116,20 @@ set_timeout = (\<lambda> s timeout periodic.
 \<rparr>
 "
 
+interpretation dataInvariant abs_driver
+  apply unfold_locales
+  by(simp add:abs_driver_def)+
+
+
 type_synonym ('s, 'r, 'time, 'timeout, 'timer_mode) driver_abstr = 
    "('s, 'r, 'time, 'timeout, 'timer_mode, 
      abstr_state, device_state, nat, nat, timer_mode) driver_morphism_rec"
 
 locale is_refinement = 
-  driver_morphism_laws _ abs_driver mor
-  for mor :: "('s, 'r, 'time, 'timeout, 'timer_mode) driver_abstr"
+  driver_morphism_laws dr abs_driver mor
++ dataInvariant dr
+  for dr :: "('s, 'r, 'time, 'timeout, 'timer_mode) driver"
+ and mor :: "('s, 'r, 'time, 'timeout, 'timer_mode) driver_abstr"
+
   
 end
