@@ -1,0 +1,138 @@
+ -- in this file, I only mention the fields  used by the driver
+-- and ignore the volatile stuff
+
+ns_in_us : U64
+ns_in_us = 1000
+
+type Timestamp_timebase = < 
+      TIMESTAMP_TIMEBASE_SYSTEM   
+    | TIMESTAMP_TIMEBASE_1_US    
+    | TIMESTAMP_TIMEBASE_10_US  
+    | TIMESTAMP_TIMEBASE_100_US
+    | TIMESTAMP_TIMEBASE_1_MS 
+    | DUMMY
+    >
+
+layout LTimestamp_timebase = variant (3b) {
+   TIMESTAMP_TIMEBASE_SYSTEM(0) : 0b,
+   TIMESTAMP_TIMEBASE_1_US  (1) : 0b,
+   TIMESTAMP_TIMEBASE_10_US (2) : 0b,
+   TIMESTAMP_TIMEBASE_100_US(3) : 0b,
+   TIMESTAMP_TIMEBASE_1_MS  (4) : 0b
+-- TODO: remove this
+   , DUMMY (7) : 0b
+ }
+
+type Timeout_timebase = 
+  <  TIMEOUT_TIMEBASE_1_US 
+   | TIMEOUT_TIMEBASE_10_US 
+   | TIMEOUT_TIMEBASE_100_US 
+   | TIMEOUT_TIMEBASE_1_MS 
+>
+
+layout LTimeout_timebase = variant (2b) {
+     TIMEOUT_TIMEBASE_1_US  (0) : 0b
+   , TIMEOUT_TIMEBASE_10_US (1) : 0b
+   , TIMEOUT_TIMEBASE_100_US(2) : 0b
+   , TIMEOUT_TIMEBASE_1_MS  (3) : 0b }
+
+
+type Meson_timer_reg = {
+-- because of a bug in the compiler, we need
+-- to respect the lexical order
+   timer_a : U32,
+   timer_a_en : Bool,
+   timer_a_input_clk : Timeout_timebase,
+   timer_a_mode : Bool,
+   timer_e : U32,
+   timer_e_hi : U32,
+   timer_e_input_clk : Timestamp_timebase
+} layout record {
+     timer_a_mode : 1b at 11b,
+     timer_a_en : 1b at 15b,
+     timer_a_input_clk : LTimeout_timebase at 0b,
+     timer_e_input_clk : LTimestamp_timebase at 8b,
+     -- timer_a_input_clk : 8b at 56B,
+     -- timer_e_input_clk : 8b at 57B,
+     timer_a : 4B at 4B,
+     timer_e : 4B at 72B, -- 4*18,
+     timer_e_hi : 4B at 76B
+}
+
+-- on the C side, set_timer_e only updates timer_e, but
+-- the timer_e_hi register would then be updated as well
+-- by the device
+set_timer_e : (U32, Meson_timer_reg) -> Meson_timer_reg
+-- set_timer_e (_, r) = r
+
+type Meson_timer = { 
+  -- ignoring volatile
+  regs : Meson_timer_reg,
+  disable : Bool
+}
+
+-- instead of Meson_timer_config, we use VAddr as abstract type
+-- it avoids unboxed abstract type in meson_init
+type CVAddr
+type VAddr = #CVAddr
+
+-- (void *)((uintptr_t) config.vaddr + (TIMER_BASE + TIMER_REG_START * 4 - TIMER_MAP_BASE));
+config_get_regs : VAddr -> Meson_timer_reg
+
+-- assume given non-null pointers?
+meson_init : (Meson_timer take regs, VAddr!) -> Meson_timer
+meson_init (timer, vaddr) =
+  let regs = config_get_regs vaddr in 
+    timer { regs = set_timer_e (0, 
+        regs { timer_a_en = True
+             -- , timer_e = 0
+             , timer_a_input_clk = TIMEOUT_TIMEBASE_1_MS
+             , timer_e_input_clk = TIMESTAMP_TIMEBASE_1_US
+          })
+      }
+
+meson_get_time : Meson_timer ! -> U64
+meson_get_time timer =
+  let initial_high : U64 = upcast timer.regs.timer_e_hi in
+  let low : U64 = upcast timer.regs.timer_e in
+  let high : U64 = upcast timer.regs.timer_e_hi in
+  -- this is a trick to check that overflow did not happen
+  -- it does not make sense without the volatile annotation of course
+  let low' : U64 = if high /= initial_high then upcast timer.regs.timer_e else low in
+  let ticks : U64 = (high << 32) .|. low' in
+  let time : U64 = ticks * ns_in_us in 
+   time
+
+-- for linearity reason, this returns the timer
+meson_set_timeout : (Meson_timer, U16, Bool) -> Meson_timer
+meson_set_timeout (timer { regs }, timeout, periodic) =
+   let regs' = regs { timer_a_mode = periodic, timer_a = upcast timeout } in       
+   if timer.disable ! timer then        
+       timer { regs = regs' { timer_a_en = True }, disable = False } 
+   else 
+       timer { regs = regs' } 
+
+meson_stop_timer : Meson_timer -> Meson_timer
+meson_stop_timer timer { regs } =
+   timer { regs = regs { timer_a_en = False },
+           disable = True }
+
+-- to generate setters and getters
+main : Meson_timer_reg -> Meson_timer_reg
+main r {
+   timer_a ,
+   timer_a_en ,
+   timer_a_input_clk ,
+   timer_a_mode ,
+   timer_e ,
+   timer_e_hi ,
+   timer_e_input_clk
+ } = r {
+   timer_a ,
+   timer_a_en ,
+   timer_a_input_clk ,
+   timer_a_mode ,
+   timer_e ,
+   timer_e_hi ,
+   timer_e_input_clk
+ }

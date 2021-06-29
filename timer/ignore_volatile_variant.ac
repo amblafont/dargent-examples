@@ -1,0 +1,25 @@
+#define TIMER_BASE      0xc1100000
+#define TIMER_MAP_BASE  0xc1109000
+
+#define TIMER_REG_START   0x2650    // TIMER_MUX
+
+typedef unsigned int    uint32_t;
+typedef uint32_t uintptr_t;
+typedef struct {
+    void *vaddr;
+} meson_timer_config_t;
+
+typedef meson_timer_config_t CVAddr;
+
+
+
+
+#include "ignore_volatile_variant.c"
+
+$ty:(Meson_timer_reg) $id:set_timer_e($ty:((U32, Meson_timer_reg)) arg) {
+  return arg.p2;
+}
+
+$ty:(Meson_timer_reg) config_get_regs(meson_timer_config_t config) {
+    return (void *) ((uintptr_t) config.vaddr + (TIMER_BASE + TIMER_REG_START * 4 - TIMER_MAP_BASE));
+}
