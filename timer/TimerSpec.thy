@@ -11,10 +11,11 @@ record ('s, 'reg, 'time, 'timeout, 'timer_mode) driver =
       and we want to avoid this
     *)
    stateInv :: "'s \<Rightarrow> bool"
+   iniDeviceInv :: "'s \<Rightarrow> 'reg \<Rightarrow> bool"
 
 locale dataInvariant =
   fixes dr ::  "('s1, 'r1, 't1, 'to1, 'tm1) driver"  
-  assumes initDI : "stateInv dr (init dr init_s init_r)"
+  assumes initDI : "iniDeviceInv dr s r \<Longrightarrow> stateInv dr (init dr s r)"
   assumes stop_timerDI :  "stateInv dr s \<Longrightarrow> stateInv dr (stop_timer dr s)"
   assumes set_timeoutDI : "stateInv dr s \<Longrightarrow> stateInv dr (set_timeout dr s to tm)"
 
@@ -42,6 +43,8 @@ locale driver_morphism_laws =
   assumes \<alpha>init : "init dr2 (\<alpha> s) (\<alpha>reg r) = \<alpha> (init dr1 s r)"
   assumes \<alpha>stop_timer : "stop_timer dr2 (\<alpha> s) = \<alpha> (stop_timer dr1 s)"
   assumes \<alpha>set_timeout : "   set_timeout dr2 (\<alpha> s) (\<alpha>timeout to) (\<alpha>timermode tm) = \<alpha> (set_timeout dr1 s to tm)"
+  assumes \<alpha>stateInv : "stateInv dr1 s \<Longrightarrow> stateInv dr2 (\<alpha> s)"
+  assumes \<alpha>iniDeviceInv : "iniDeviceInv dr1 s r \<Longrightarrow> iniDeviceInv dr2 (\<alpha> s) (\<alpha>reg r)"
 
 (* abstract driver *)
 
@@ -84,9 +87,8 @@ definition abs_driver :: "(abstr_state, device_state, nat, nat, timer_mode) driv
   "abs_driver = 
 \<lparr> get_time = (\<lambda> s. (timer_e_low_hi (deviceState s))  * (ns_in_us :: nat)),
 
- init = (\<lambda> s r. s \<lparr> deviceState := r \<lparr>
-        timer_a_en := True
-      , timer_e_low_hi := 0
+ init = (\<lambda> s r. s \<lparr> deviceState := r \<lparr>     
+        timer_e_low_hi := 0
       , timer_a_input_clk := TIMEOUT_TIMEBASE_1_MS
       , timer_e_input_clk := TIMESTAMP_TIMEBASE_1_US
  \<rparr> \<rparr>),
@@ -111,7 +113,8 @@ set_timeout = (\<lambda> s timeout periodic.
        \<lparr> driverState = \<lparr> disable = False \<rparr>,
         deviceState = deviceState' \<rparr>
    )
-   , stateInv = (\<lambda>s. True)
+   , stateInv = (\<lambda>s. disable (driverState s) = Not (timer_a_en (deviceState s)))
+   , iniDeviceInv = (\<lambda>s r. disable (driverState s) \<and> Not (timer_a_en r))
 
 \<rparr>
 "

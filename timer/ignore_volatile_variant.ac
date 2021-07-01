@@ -16,8 +16,8 @@ typedef meson_timer_config_t CVAddr;
 
 #include "ignore_volatile_variant.c"
 
-$ty:(Meson_timer_reg) $id:set_timer_e($ty:((U32, Meson_timer_reg)) arg) {
-  return arg.p2;
+$ty:(Meson_timer_reg) $id:reset_timer_e($ty:(Meson_timer_reg) arg) {
+   return ($exp:(reset_timer_e_cogent) (arg));
 }
 
 $ty:(Meson_timer_reg) config_get_regs(meson_timer_config_t config) {

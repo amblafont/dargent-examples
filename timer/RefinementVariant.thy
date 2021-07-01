@@ -3,17 +3,17 @@ theory RefinementVariant
  "build_ignore_volatile_variant/Ignore_volatile_variant_dargentfull_Shallow_Desugar"
 begin
 
-fun curry_T0 :: "(('a, 'b, 'c) T0 \<Rightarrow> 'z) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'z)" where
-  "curry_T0 f a b c = f (\<lparr> T0.p1\<^sub>f = a, p2\<^sub>f = b, p3\<^sub>f = c \<rparr>)"
+fun curry_T1 :: "(('a, 'b, 'c) T1 \<Rightarrow> 'z) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'z)" where
+  "curry_T1 f a b c = f (\<lparr> T1.p1\<^sub>f = a, p2\<^sub>f = b, p3\<^sub>f = c \<rparr>)"
 
-fun curry_T3 :: "(('a, 'b) T1 \<Rightarrow> 'c) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c)" where
-  "curry_T3 f a b = f (\<lparr> T1.p1\<^sub>f = a, p2\<^sub>f = b \<rparr>)"
+fun curry_T0 :: "(('a, 'b) T0 \<Rightarrow> 'c) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c)" where
+  "curry_T0 f a b = f (\<lparr> T0.p1\<^sub>f = a, p2\<^sub>f = b \<rparr>)"
 
 type_synonym concr_device_state = "Meson_timer_reg\<^sub>T"
 type_synonym concr_state = "Meson_timer\<^sub>T"
 
 axiomatization
-  where  set_timer_e_def : "set_timer_e (T1.make n reg) =
+  where  reset_timer_e_def : "reset_timer_e reg =
       reg \<lparr> timer_e_hi\<^sub>f := 0, timer_e\<^sub>f := 0 \<rparr>
      "
 
@@ -22,13 +22,16 @@ definition concr_driver :: "(concr_state, VAddr, 64 word, 16 word, bool) driver"
   "concr_driver = 
 \<lparr> 
   get_time = meson_get_time,
-  init = curry_T3 meson_init,
+  init = curry_T0 meson_init,
   stop_timer = meson_stop_timer,
-  set_timeout = curry_T0 meson_set_timeout,
+  set_timeout = curry_T1 meson_set_timeout,
 \<comment> \<open>we are going to multiply it by 1000 (\<approx> 1024 = 2^10) \<close>
-  stateInv = (\<lambda>s.  timer_e_hi\<^sub>f (regs\<^sub>f s) < 2^(32-10))
+  stateInv = (\<lambda>s. timer_e_hi\<^sub>f (regs\<^sub>f s) < 2^(32-10)
+             \<and>  disable\<^sub>f s = Not (timer_a_en\<^sub>f (regs\<^sub>f s)) ),
+  iniDeviceInv = (\<lambda>s r. (disable\<^sub>f s = True \<and> Not (timer_a_en\<^sub>f (config_get_regs r))))
 \<rparr>
 "
+
 
 locale concr_is_refinement = 
   is_refinement concr_driver mor
@@ -143,7 +146,7 @@ interpretation concr_implementation:
 
 
     apply (simp add:simp_defs meson_init_def meson_get_time_def ns_in_us_def
-  set_timer_e_def)
+  reset_timer_e_def)
      apply(case_tac s, rename_tac regs disable, case_tac regs)
     apply(simp add: take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def)
      (* hmm *)
@@ -159,8 +162,12 @@ interpretation concr_implementation:
      apply(simp add:unat_ucast_up)
 
 (* invariants *)
-    apply(simp add:simp_defs meson_init_def take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def Let\<^sub>d\<^sub>s_def set_timer_e_def)
+    apply(simp add:simp_defs meson_init_def take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def Let\<^sub>d\<^sub>s_def reset_timer_e_def)
+     apply(simp add:simp_defs  meson_stop_timer_def  ns_in_us_def take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def)
+
+    apply(simp add:simp_defs meson_init_def take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def Let\<^sub>d\<^sub>s_def reset_timer_e_def)
    apply(simp add:simp_defs  meson_stop_timer_def  ns_in_us_def take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def)
+
   apply(simp add:simp_defs  meson_set_timeout_def  take\<^sub>c\<^sub>o\<^sub>g\<^sub>e\<^sub>n\<^sub>t_def Let\<^sub>d\<^sub>s_def)
   
   by(simp add: HOL.Let_def )
