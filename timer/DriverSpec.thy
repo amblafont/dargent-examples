@@ -1,4 +1,4 @@
-theory TimerSpec
+theory DriverSpec
   imports Main
 begin
 

@@ -1,5 +1,5 @@
-theory RefinementVariant
-  imports Main "HOL-Word.Word" "Word_Lib.Word_Lib" "TimerSpec"
+theory DriverProof
+  imports Main "HOL-Word.Word" "Word_Lib.Word_Lib" "DriverSpec"
  "build_ignore_volatile_variant/Ignore_volatile_variant_dargentfull_Shallow_Desugar"
 begin
 
@@ -39,21 +39,21 @@ locale concr_is_refinement =
 
   
 
-fun \<alpha>timeout_timebase :: "Timeout_timebase\<^sub>T \<Rightarrow> TimerSpec.timeout_timebase"
+fun \<alpha>timeout_timebase :: "Timeout_timebase\<^sub>T \<Rightarrow> DriverSpec.timeout_timebase"
   where 
-   "\<alpha>timeout_timebase (TIMEOUT_TIMEBASE_100_US _) = TimerSpec.TIMEOUT_TIMEBASE_1_US"
-|  "\<alpha>timeout_timebase (TIMEOUT_TIMEBASE_10_US _)  = TimerSpec.TIMEOUT_TIMEBASE_10_US"
-|  "\<alpha>timeout_timebase (TIMEOUT_TIMEBASE_1_MS _)   = TimerSpec.TIMEOUT_TIMEBASE_1_MS"
-|  "\<alpha>timeout_timebase (TIMEOUT_TIMEBASE_1_US _)   = TimerSpec.TIMEOUT_TIMEBASE_1_US"
+   "\<alpha>timeout_timebase (TIMEOUT_TIMEBASE_100_US _) = DriverSpec.TIMEOUT_TIMEBASE_1_US"
+|  "\<alpha>timeout_timebase (TIMEOUT_TIMEBASE_10_US _)  = DriverSpec.TIMEOUT_TIMEBASE_10_US"
+|  "\<alpha>timeout_timebase (TIMEOUT_TIMEBASE_1_MS _)   = DriverSpec.TIMEOUT_TIMEBASE_1_MS"
+|  "\<alpha>timeout_timebase (TIMEOUT_TIMEBASE_1_US _)   = DriverSpec.TIMEOUT_TIMEBASE_1_US"
    
    
-fun \<alpha>timestamp_timebase :: "Timestamp_timebase\<^sub>T \<Rightarrow> TimerSpec.timestamp_timebase"
+fun \<alpha>timestamp_timebase :: "Timestamp_timebase\<^sub>T \<Rightarrow> DriverSpec.timestamp_timebase"
   where 
-   "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_100_US _) = TimerSpec.TIMESTAMP_TIMEBASE_100_US"
-|  "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_10_US _)  = TimerSpec.TIMESTAMP_TIMEBASE_10_US"
-|  "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_1_MS _)   = TimerSpec.TIMESTAMP_TIMEBASE_1_MS"
-|  "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_1_US _)   = TimerSpec.TIMESTAMP_TIMEBASE_1_US"
-|  "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_SYSTEM _) = TimerSpec.TIMESTAMP_TIMEBASE_SYSTEM"
+   "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_100_US _) = DriverSpec.TIMESTAMP_TIMEBASE_100_US"
+|  "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_10_US _)  = DriverSpec.TIMESTAMP_TIMEBASE_10_US"
+|  "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_1_MS _)   = DriverSpec.TIMESTAMP_TIMEBASE_1_MS"
+|  "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_1_US _)   = DriverSpec.TIMESTAMP_TIMEBASE_1_US"
+|  "\<alpha>timestamp_timebase (TIMESTAMP_TIMEBASE_SYSTEM _) = DriverSpec.TIMESTAMP_TIMEBASE_SYSTEM"
 
 
 definition \<alpha>_timer_mode :: "bool \<Rightarrow> timer_mode"
