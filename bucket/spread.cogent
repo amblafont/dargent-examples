@@ -1,0 +1,5 @@
+type R = { a : < A Bool | B Bool >, b : U64 }
+  layout record { a : variant (1b at 1b) { A(0) : 1b at 0b, B(1): 1b at 67b },
+                  b : 64b at 2b }
+main : R -> R
+main x { a , b } = x {a, b}
