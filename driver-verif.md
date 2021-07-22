@@ -5,6 +5,10 @@ cogent.
 
 See https://github.com/amblafont/timer-driver-cogent.
 
+Other examples that might be worth investigating:
+- https://github.com/seL4/util_libs/blob/b0a3a4b292e3eaedfcd5770fc647768c49b3e653/libplatsupport/src/plat/hifive/pwm.c
+- https://github.com/seL4/util_libs/blob/b0a3a4b292e3eaedfcd5770fc647768c49b3e653/libplatsupport/src/plat/bcm2837/spt.c (however the init function might be tricky)
+
 # Communicating with a device
 Depending on the device, the driver communicates with it either by sending and receiving 
 data through ports or by manipulating specific memory locations.
