@@ -1,0 +1,12 @@
+type Seed
+-- just a pair
+type SeedValue = #{seed: Seed, value:U8}
+rand_with_seed : Seed -> SeedValue
+
+main : Seed -> SeedValue
+main seed = 
+  let r { seed } = rand_with_seed seed in
+  let r2 { seed }  = rand_with_seed seed in
+   #{ seed = seed,
+      value = r.value + r2.value
+   }
