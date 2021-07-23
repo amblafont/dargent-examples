@@ -63,13 +63,15 @@ an nondeterministic shallow embedding, which would be more suitable in case we
 want to consider nondeterministic abstract functions. Since the compiler does
 not currently support this, this nondeterministic shallow embedding must be manually
 written, together with the proof of correspondence with the value
-semantics (is it what happens with Bilby?).
+semantics.
 
 A drawback of an nondeterministic shallow embedding is that it is more 
 complex, since it results in a monadic program rather than purely 
 functional one. However, it is still simpler than the AutoCorres embedding.
 For example, it only involves the nondeterministic monad and the code is also simpler:
 no guard, and isabelle sum types are directly available.
+
+TODO: write something about the way the Bilby proof manages non determinacy
 
 # A challenge: stateful computations, beyond indeterminacy
 
