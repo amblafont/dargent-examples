@@ -9,6 +9,13 @@ Other examples that might be worth investigating:
 - https://github.com/seL4/util_libs/blob/b0a3a4b292e3eaedfcd5770fc647768c49b3e653/libplatsupport/src/plat/hifive/pwm.c 
 (but it involves U4 bitfield, see `PWMSCALE_MASK`)
 - https://github.com/seL4/util_libs/blob/b0a3a4b292e3eaedfcd5770fc647768c49b3e653/libplatsupport/src/plat/bcm2837/spt.c (however the init function might be tricky)
+- https://github.com/libopencm3/libopencm3 (repository found by searching 'arm' on github) has a lot of potential, e.g.,
+  * https://github.com/libopencm3/libopencm3/tree/master/lib/stm32/common/opamp_common_v1.c (not very interesting, but definitely a use case for dargent)
+  * https://github.com/libopencm3/libopencm3/tree/master/lib/swm050/timer.c
+  * https://github.com/libopencm3/libopencm3/tree/master/lib/pac55xx/can.c (a CAN driver)
+  * https://github.com/libopencm3/libopencm3/tree/master/lib/msp432/e4/gpio.c (there is a fixed size for loop that could be unfolded to avoid abstract functions)
+
+
 
 # Communicating with a device
 Depending on the device, the driver communicates with it either by sending and receiving 
@@ -42,6 +49,10 @@ memory model. Note, however, that if the driver is only writing and never readin
 One possible solution consists in manipulating the volatile memory locations using
 abstract functions and give them a relevant semantics. However, I think it has
 some limitations, as I am arguing in a later section.
+
+Another issue is that a driver may set a local variable before updating the memory location
+with this variable. This is not currently supported by dargent since it would require to give
+a layout to an unboxed variable.
 
 # A challenge: nondeterministic abstract functions
 
