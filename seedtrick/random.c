@@ -4,5 +4,5 @@ char rand ();
 
 // the function that we want to write in cogent
 char main() {
-	return check() + check();
+	return rand() + rand();
 }
