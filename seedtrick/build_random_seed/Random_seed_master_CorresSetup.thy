@@ -30,6 +30,15 @@ definition val_rel_bool_t_C_def:
      uv = UPrim (LBool (boolean_C x \<noteq> 0))"
 instance ..
 end
+(*
+instantiation Seed_C :: cogent_C_val
+begin
+definition type_rel_Seed_C_def: "\<And> typ. type_rel typ (_ :: Seed_C itself) \<equiv> (typ = RCon ''Seed'' [] )"
+definition val_rel_Seed_C_def:
+   "\<And> uv x. val_rel uv (x :: Seed_C) \<equiv>   uv = UAbstract Seed"
+instance ..
+end
+*)
 context update_sem_init begin
 lemmas corres_if = corres_if_base[where bool_val' = boolean_C,
                      OF _ _ val_rel_bool_t_C_def[THEN meta_eq_to_obj_eq, THEN iffD1]]

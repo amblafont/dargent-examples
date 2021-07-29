@@ -8,7 +8,8 @@ imports "Cogent.Util"
 "CogentShallow.ShallowUtil"
 begin
 
-typedecl  Seed
+(* typedecl Seed *)
+type_synonym Seed = nat
 
 record ('a, 'b) SeedValue =
   seed\<^sub>f :: "'a"
@@ -18,4 +19,46 @@ type_synonym  SeedValue\<^sub>T = "( Seed, 8 word) SeedValue"
 
 consts rand_with_seed :: " Seed \<Rightarrow>  SeedValue\<^sub>T"
 
+
 end
+ (*
+
+term valRel
+type_synonym ('f, 'a) vabsfuns = "'f \<Rightarrow> ('f, 'a) vval \<Rightarrow> ('f,'a) vval \<Rightarrow> bool"
+
+term "_ :: vabstyp "
+  definition valRel_WordArrayUX: 
+    "\<And>\<xi> x v. valRel_WordArrayUX (\<xi> :: (funtyp,vabstyp) vabsfuns) (x :: 8 word) (v :: (funtyp, vabstyp) vval) \<equiv> 
+      (if len_of TYPE('a) = 8 then 
+        \<exists>xs. v = VAbstract (VWA (TPrim (Num U8)) xs) \<and> length x = length xs \<and> (\<forall>i < length xs. (xs ! i) = VPrim (LU8 (ucast (x ! i))))
+      else if len_of TYPE('a) = 16 then 
+        \<exists>xs. v = VAbstract (VWA (TPrim (Num U16)) xs) \<and> length x = length xs \<and> (\<forall>i < length xs. (xs ! i) = VPrim (LU16 (ucast (x ! i))))
+      else if len_of TYPE('a) = 32 then 
+        \<exists>xs. v = VAbstract (VWA (TPrim (Num U32)) xs) \<and> length x = length xs \<and> (\<forall>i < length xs. (xs ! i) = VPrim (LU32 (ucast (x ! i))))
+      else if len_of TYPE('a) = 64 then 
+        \<exists>xs. v = VAbstract (VWA (TPrim (Num U64)) xs) \<and> length x = length xs \<and> (\<forall>i < length xs. (xs ! i) = VPrim (LU64 (ucast (x ! i))))
+      else False)"
+
+
+definition
+  valRel_something 
+  where  
+    "\<And>\<xi> x v. valRel_WordArrayUX (\<xi> :: (funtyp,vabstyp) vabsfuns) (x :: (('a :: len8) word) WordArray) (v :: (funtyp, vabstyp) vval) \<equiv> 
+      (if len_of TYPE('a) = 8 then "
+
+axiomatization rand :: "unit \<Rightarrow> 8 word"
+  where rand_inv : "valRel () \<in> UNIV"
+
+
+
+
+axiomatization rand_with_seed :: " Seed \<Rightarrow>  SeedValue\<^sub>T"
+  where rand_seed_inv : " seed\<^sub>f (rand_with_seed s) = s"
+and rand_value_inv :(*  " value\<^sub>f (rand_with_seed s) \<in> UNIV" *)
+   "\<exists> v1 v2. value\<^sub>f (rand_with_seed s) = v1 + v2"
+(*
+lemma "value\<^sub>f (rand_with_seed s) mod 2 = 0"
+  apply(
+*)
+(* \<lparr> seed\<^sub>f = s, value\<^sub>f = rand ()  \<rparr> *)
+*)
