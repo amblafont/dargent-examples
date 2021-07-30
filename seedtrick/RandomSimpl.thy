@@ -104,25 +104,25 @@ We first need a relation between sh_Seed and ac_Seed values
 *)
 
 (* TODO: specify *)
-consts rel_seed :: "ac_Seed \<Rightarrow> sh_Seed \<Rightarrow> bool"
+consts val_rel_seed :: "ac_Seed \<Rightarrow> sh_Seed \<Rightarrow> bool"
 (*   where "rel_seed ac_seed sh_seed = undefined" *)
 
-type_synonym ac_state = "ac_Seed ptr \<Rightarrow> ac_Seed"
+type_synonym heap = "ac_Seed ptr \<Rightarrow> ac_Seed"
 
 definition corres :: "
-   (ac_Seed ptr \<Rightarrow> (ac_state, ac_Seed ptr \<times> nat) nondet_monad)
+   (ac_Seed ptr \<Rightarrow> (heap, ac_Seed ptr \<times> nat) nondet_monad)
 \<Rightarrow> (sh_Seed \<Rightarrow> sh_Seed \<times> nat)
 \<Rightarrow> bool"
-  where "corres ac_fun sh_fun = 
-(\<forall> ac_ptr_seed sh_seed (ac_state :: ac_state). 
-rel_seed (ac_state ac_ptr_seed) sh_seed \<longrightarrow>
-\<not> snd (ac_fun ac_ptr_seed ac_state) \<longrightarrow>
-(\<forall> ac_ptr_seedf sh_seedf 
-   ac_ret sh_ret  
-   ac_statef. 
-   ((ac_ptr_seedf, ac_ret), ac_statef) \<in> fst (ac_fun ac_ptr_seed ac_state)
-\<longrightarrow> (sh_seedf, sh_ret) = sh_fun sh_seed
-\<longrightarrow> ac_ret = sh_ret \<and> rel_seed (ac_statef ac_ptr_seedf) sh_seedf
+  where "corres f' f = 
+(\<forall> s' s (\<sigma> :: heap). 
+val_rel_seed (\<sigma> s') s \<longrightarrow>
+\<not> snd (f' s' \<sigma>) \<longrightarrow>
+(\<forall> s'f sf 
+   r' r  
+   \<sigma>'. 
+   ((s'f, r'), \<sigma>') \<in> fst (f' s' \<sigma>)
+\<longrightarrow> (sf, r) = f s
+\<longrightarrow> r' = r \<and> val_rel_seed (\<sigma>' s'f) sf
 ))   
 "
  
@@ -134,18 +134,18 @@ lemma refine_rand_with_seed : "(corres ac_rand_with_seed sh_rand_with_seed)"
 lemma no_refine_rand_with_seed   :
   assumes corr: "corres ac_rand_with_seed sh_rand_with_seed"
   fixes ac_seed sh_seed
-  assumes seed_rel : "rel_seed ac_seed sh_seed"
+  assumes seed_rel : "val_rel_seed ac_seed sh_seed"
   shows "False"
 proof -
-  let ?ac_state = "\<lambda>_. ac_seed"
+  let ?heap = "\<lambda>_. ac_seed"
   let ?ac_ptr_seed = "Ptr 0"
   have "
 ((\<And> ac_ptr_seedf sh_seedf 
    ac_ret sh_ret  
-   ac_statef. 
-   ((ac_ptr_seedf, ac_ret), ac_statef) \<in> fst (ac_rand_with_seed ?ac_ptr_seed ?ac_state)
+   heapf. 
+   ((ac_ptr_seedf, ac_ret), heapf) \<in> fst (ac_rand_with_seed ?ac_ptr_seed ?heap)
 \<Longrightarrow> (sh_seedf, sh_ret) = sh_rand_with_seed sh_seed
-\<Longrightarrow> ac_ret = sh_ret \<and> rel_seed (ac_statef ac_ptr_seedf) sh_seedf))"
+\<Longrightarrow> ac_ret = sh_ret \<and> val_rel_seed (heapf ac_ptr_seedf) sh_seedf))"
   using corr seed_rel
   apply(simp add:corres_def  ac_rand_with_seed_spec)
   by fastforce
