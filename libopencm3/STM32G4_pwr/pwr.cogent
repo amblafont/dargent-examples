@@ -1,0 +1,210 @@
+type Vos_scale = < PWR_SCALE1 | PWR_SCALE2 >
+layout LPwr_vosscale = variant (2b) { 
+      PWR_SCALE1(1) : 0b,
+      PWR_SCALE2(2) : 0b
+    }
+
+{-
+ #define PWR_CR1_LPMS_STOP_0     0
+ #define PWR_CR1_LPMS_STOP_1     1
+ // reserved, according to the datasheet
+ // #define PWR_CR1_LPMS_STOP_2     2
+ #define PWR_CR1_LPMS_STANDBY    3
+ #define PWR_CR1_LPMS_SHUTDOWN   4
+-}
+type Lpms = <
+      PWR_CR1_LPMS_STOP_0
+    | PWR_CR1_LPMS_STOP_1
+    | PWR_CR1_LPMS_STANDBY
+    | PWR_CR1_LPMS_SHUTDOWN >
+layout LLpms = variant (3b) {
+    PWR_CR1_LPMS_STOP_0(0)   : 0b,
+    PWR_CR1_LPMS_STOP_1(1)   : 0b,
+    PWR_CR1_LPMS_STANDBY(3)  : 0b,
+    PWR_CR1_LPMS_SHUTDOWN(4) : 0b
+}
+
+type Cr1 = {
+    vos : Vos_scale,
+    dbp : Bool,
+    lpms : Lpms
+}   layout record {
+    vos : LPwr_vosscale at 9b,
+    dbp : 1b at 8b,
+    lpms : LLpms at 0b
+}
+
+{- 
+
+Second register controller
+
+-}
+
+{-
+
+#define 	PWR_CR2_PLS_2V0   0x00
+#define 	PWR_CR2_PLS_2V2   0x01 
+#define 	PWR_CR2_PLS_2V4   0x02 
+#define 	PWR_CR2_PLS_2V5   0x03 
+#define 	PWR_CR2_PLS_2V6   0x04 
+#define 	PWR_CR2_PLS_2V8   0x05 
+#define 	PWR_CR2_PLS_2V9   0x06 
+#define 	PWR_CR2_PLS_PVD_IN   0x07
+
+-}
+type Pvd_level = < 
+   PWR_CR2_PLS_2V0
+ | PWR_CR2_PLS_2V2
+ | PWR_CR2_PLS_2V4
+ | PWR_CR2_PLS_2V5
+ | PWR_CR2_PLS_2V6
+ | PWR_CR2_PLS_2V8
+ | PWR_CR2_PLS_2V9
+ | PWR_CR2_PLS_PVD_IN
+>
+layout Lpvd_level = variant (3b) {
+    PWR_CR2_PLS_2V0(0) : 0b
+  , PWR_CR2_PLS_2V2(1) : 0b
+  , PWR_CR2_PLS_2V4(2) : 0b
+  , PWR_CR2_PLS_2V5(3) : 0b
+  , PWR_CR2_PLS_2V6(4) : 0b
+  , PWR_CR2_PLS_2V8(5) : 0b
+  , PWR_CR2_PLS_2V9(6) : 0b
+  , PWR_CR2_PLS_PVD_IN(7) : 0b
+}
+
+type Cr2 = {
+    pls : Pvd_level,
+    pvde : Bool
+} layout record { 
+    pls : Lpvd_level at 1b,
+    pvde : 1b at 0b
+}
+
+
+{- 
+
+Fifth register controller
+
+-}
+type Cr5 = {
+    r1mode : Bool    
+} layout record { 
+    r1mode : 1b at 8b
+}
+
+
+{-
+ void pwr_set_vos_scale(enum pwr_vos_scale scale)
+ {
+         uint32_t reg32;
+  
+         reg32 = PWR_CR1 & ~(PWR_CR1_VOS_MASK << PWR_CR1_VOS_SHIFT);
+         reg32 |= (scale & PWR_CR1_VOS_MASK) << PWR_CR1_VOS_SHIFT;
+         PWR_CR1 = reg32;
+ }
+-}
+pwr_set_vos_scale : (Cr1, Vos_scale) -> Cr1
+pwr_set_vos_scale (reg, scale) =
+   reg { vos = scale }
+
+{-
+ /** Disable Backup Domain Write Protection
+  *
+  * This allows backup domain registers to be changed. These registers are write
+  * protected after a reset.
+  */
+ void pwr_disable_backup_domain_write_protect(void)
+ {
+         PWR_CR1 |= PWR_CR1_DBP;
+ }
+-}
+pwr_disable_backup_domain_write_protect : Cr1 -> Cr1
+pwr_disable_backup_domain_write_protect reg = reg { dbp = True }
+
+{-
+/** Re-enable Backup Domain Write Protection
+  *
+  * This protects backup domain registers from inadvertent change.
+  */
+ void pwr_enable_backup_domain_write_protect(void)
+ {
+         PWR_CR1 &= ~PWR_CR1_DBP;
+ }
+-}
+pwr_enable_backup_domain_write_protect : Cr1 -> Cr1
+pwr_enable_backup_domain_write_protect reg = reg { dbp = False }
+
+{-
+
+/*---------------------------------------------------------------------------*/
+ /** @brief Select the low power mode used in deep sleep.
+  * @param lpms low power mode @ref pwr_cr1_lpms
+  */
+ void pwr_set_low_power_mode_selection(uint32_t lpms)
+ {
+         uint32_t reg32;
+  
+         reg32 = PWR_CR1;
+         reg32 &= ~(PWR_CR1_LPMS_MASK << PWR_CR1_LPMS_SHIFT);
+         PWR_CR1 = (reg32 | (lpms << PWR_CR1_LPMS_SHIFT));
+ }
+  
+
+-}
+pwr_set_low_power_mode_selection : (Cr1, Lpms) -> Cr1
+pwr_set_low_power_mode_selection (reg, lpms) = reg { lpms }
+
+
+{-
+ 
+ /*---------------------------------------------------------------------------*/
+ /** @brief Enable Power Voltage Detector.
+  * @param[in] pvd_level Power Voltage Detector Falling Threshold voltage @ref pwr_pls.
+ */
+ void pwr_enable_power_voltage_detect(uint32_t pvd_level)
+ {
+         uint32_t reg32;
+  
+         reg32 = PWR_CR2;
+         reg32 &= ~(PWR_CR2_PLS_MASK << PWR_CR2_PLS_SHIFT);
+         PWR_CR2 = (reg32 | (pvd_level << PWR_CR2_PLS_SHIFT) | PWR_CR2_PVDE);
+ }
+
+-}
+pwr_enable_power_voltage_detect : (Cr2, Pvd_level) -> Cr2
+pwr_enable_power_voltage_detect (reg, pls) = reg { pls, pvde = True }
+
+{-  /*---------------------------------------------------------------------------*/
+ /** @brief Disable Power Voltage Detector.
+ */
+ void pwr_disable_power_voltage_detect(void)
+ {
+         PWR_CR2 &= ~PWR_CR2_PVDE;
+ }
+ -}  
+pwr_disable_power_voltage_detect : Cr2 -> Cr2
+pwr_disable_power_voltage_detect reg = reg { pvde = False }
+
+
+{-  /*---------------------------------------------------------------------------*/
+ /** @brief Enable Boost Mode.
+ */
+ void pwr_enable_boost(void)
+ {
+         PWR_CR5 &= ~PWR_CR5_R1MODE;
+ }
+ -}
+pwr_enable_boost : Cr5 -> Cr5
+pwr_enable_boost reg = reg { r1mode = False }
+{-  /*---------------------------------------------------------------------------*/
+ /** @brief Disable Boost Mode.
+ */
+ void pwr_disable_boost(void)
+ {
+         PWR_CR5 |= PWR_CR5_R1MODE;
+ }
+ -}
+pwr_disable_boost : Cr5 -> Cr5
+pwr_disable_boost reg = reg { r1mode = True }
+
