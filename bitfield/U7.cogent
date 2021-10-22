@@ -1,0 +1,8 @@
+-- wordarray-example
+-- cogent/itp2021-artefact/sum-example
+-- in two days in Sum_AllRefine
+type U7
+type A = { a : #U7 } layout record { a : 7b }
+
+main : A -> A
+main r { a } = r { a }
