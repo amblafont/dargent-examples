@@ -1,0 +1,6 @@
+
+main : { a : U8} -> { a : U8 }
+main x = x
+
+
+
