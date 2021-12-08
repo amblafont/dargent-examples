@@ -168,6 +168,16 @@ and uv\<^sub>m = ?pu and vv\<^sub>m = ?vv and ?vv\<^sub>p = ?vv and s = st and \
     and v_cor:  " val_rel_shallow_C rename
         (U8rec_uabsfunsdeclfix_Shallow_Desugar.main ?vs) p' vv' pu' \<xi>\<^sub>p \<sigma>' \<Xi>"
 
+(* I am forced to deconstruct the evaluation relation in the update semantics *)
+    have eqp\<sigma>: "pu' = ?pu \<and> \<sigma>' = ?\<sigma>"
+      using u_eval
+      apply(unfold U8rec_uabsfunsdeclfix_TypeProof.main_def)
+      apply(ind_cases "_, _  \<turnstile> (_, expr.Let _ _) \<Down>! (_, _)")
+      apply(ind_cases "_, _  \<turnstile> (_, Var 0) \<Down>! (_, _)")+
+      by simp
+     
+
+
 (* unfolding v_cor *)
     obtain \<tau> r w repr where
      eq': "vv' = VRecord [VPrim (LU8 (a\<^sub>f (U8rec_uabsfunsdeclfix_Shallow_Desugar.main ?vs)))]"
@@ -180,8 +190,11 @@ and  uv_rel':      "upd_val_rel \<Xi> \<sigma>' pu' (rename_val rename (monoval 
       apply(elim exE conjE)
       by simp
  
-  
+   have eqp: "p' = p"
+     using eq'
+     by(simp add:eqp\<sigma>)
 
+    
 (* the update value evaluation preserves typing *)
   obtain w' 
     where      "uval_typing \<Xi> \<sigma>' pu' ?typ {} w'"     
@@ -192,12 +205,20 @@ and  uv_rel':      "upd_val_rel \<Xi> \<sigma>' pu' (rename_val rename (monoval 
       apply(rule U8rec_uabsfunsdeclfix_AllRefine.main_typecorrect'[simplified type_simps]; simp)
       using preservation_mono abs_stuff  various_stuff 
       by force+
-    
+
+ 
 
     (* can I show this without evaluating main in the value/update semantics? *)
     have  "heap st' p' = heap st p" 
  (* Help! *)
-    by sorry
+      using st'_rel
+      apply(simp add:state_rel_def heap_rel_def heap_rel_ptr_meta)
+      apply(drule all_heap_rel_ptrD[where \<sigma> = \<sigma>' and p = p'])
+        apply(simp add:eqp\<sigma> eqp)
+       apply(simp add:TypeRelSimp)
+      apply (simp add:ValRelSimp)
+      
+      by (metis t1_C_idupdates(1))
 } 
   note meat = this
 
