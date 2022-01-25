@@ -1,0 +1,70 @@
+type Example =
+    { field0 : < Con0  #{ field0 : < Con0 < Con0 U64 
+                                          | Con1 Bool 
+                                          | Con2  #{ field0 : U16
+                                                   , field1 : Bool
+                                                   , field2 : Bool } 
+                                          | Con3 Bool 
+                                          | Con4 Bool 
+                                          | Con5 Bool > 
+                                   | Con1 Bool 
+                                   | Con2 Bool >
+                        , field1 : U8
+                        , field2 : U8
+                        , field3 :  #{ field0 : Bool
+                                     , field1 : Bool } } 
+               | Con1 U64 
+               | Con2 < Con0 U8 
+                      | Con1 Bool 
+                      | Con2 Bool 
+                      | Con3  #{ field0 : Bool
+                               , field1 :  #{ field0 : Bool } } > 
+               | Con3 Bool 
+               | Con4  #{ field0 : Bool } 
+               | Con5 Bool 
+               | Con6 Bool >
+    , field1 : U8
+    , field2 : U16
+    , field3 : U8
+    , field4 :  #{ field0 : Bool
+                 , field1 : Bool } } layout record { field0 : variant (3b at 262b) { Con0 (0): record { field0 : variant (2b at 240b) { Con0 (0): variant (3b at 236b) { Con0 (0): 64b at 172b
+                                                                                                                                                                       , Con1 (1): 1b at 235b
+                                                                                                                                                                       , Con2 (2): record { field0 : 16b at 218b
+                                                                                                                                                                                          , field1 : 1b at 234b
+                                                                                                                                                                                          , field2 : 1b at 235b }
+                                                                                                                                                                       , Con3 (3): 1b at 235b
+                                                                                                                                                                       , Con4 (4): 1b at 235b
+                                                                                                                                                                       , Con5 (5): 1b at 235b }
+                                                                                                                                      , Con1 (1): 1b at 239b
+                                                                                                                                      , Con2 (2): 1b at 239b }
+                                                                                                      , field1 : 8b at 244b
+                                                                                                      , field2 : 8b at 252b
+                                                                                                      , field3 : record { field0 : 1b at 260b
+                                                                                                                        , field1 : 1b at 261b } }
+                                                                                   , Con1 (1): 64b at 198b
+                                                                                   , Con2 (2): variant (2b at 258b) { Con0 (0): 8b at 250b
+                                                                                                                    , Con1 (1): 1b at 257b
+                                                                                                                    , Con2 (2): 1b at 257b
+                                                                                                                    , Con3 (3): record { field0 : 1b at 256b
+                                                                                                                                       , field1 : record { field0 : 1b at 257b } } }
+                                                                                   , Con3 (3): 1b at 261b
+                                                                                   , Con4 (4): record { field0 : 1b at 261b }
+                                                                                   , Con5 (5): 1b at 261b
+                                                                                   , Con6 (6): 1b at 261b }
+                                                   , field1 : 8b at 266b
+                                                   , field2 : 16b at 274b
+                                                   , field3 : 8b at 290b
+                                                   , field4 : record { field0 : 1b at 298b
+                                                                     , field1 : 1b at 299b } }
+
+main : Example -> Example
+main r { field0
+       , field1
+       , field2
+       , field3
+       , field4 } =
+   r { field0
+     , field1
+     , field2
+     , field3
+     , field4 }
