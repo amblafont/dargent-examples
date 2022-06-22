@@ -24,10 +24,14 @@ fold (fn f => fn ctxt => let
     val tt_thm = Proof_Context.get_thm ctxt (typeproof_thy ^ "." ^ f ^ "_typecorrect")
     val f_type = Syntax.read_term ctxt (typeproof_thy ^ "." ^ f ^ "_type")
     val f_type_def = Proof_Context.get_thm ctxt (typeproof_thy ^ "." ^ f ^ "_type_def")
-    val k_empty = Goal.prove ctxt [] [] (@{mk_term "prod.fst ?t \<equiv> []" t} f_type)
+    val nl_empty = Goal.prove ctxt [] [] (@{mk_term "prod.fst ?t \<equiv> 0" t} f_type)
+                    (K (simp_tac (ctxt addsimps [f_type_def]) 1))
+    val k_empty = Goal.prove ctxt [] [] (@{mk_term "prod.fst (prod.snd ?t) \<equiv> []" t} f_type)
+                    (K (simp_tac (ctxt addsimps [f_type_def]) 1))
+    val c_empty = Goal.prove ctxt [] [] (@{mk_term "prod.fst (prod.snd (prod.snd ?t)) \<equiv> {}" t} f_type)
                     (K (simp_tac (ctxt addsimps [f_type_def]) 1))
     val t_thm = (tt_thm RS @{thm ttyping_imp_typing})
-                |> rewrite_rule ctxt [@{thm snd_conv[THEN eq_reflection]}, k_empty]
+                |> rewrite_rule ctxt [@{thm snd_conv[THEN eq_reflection]}, nl_empty, k_empty, c_empty]
     in Local_Theory.note ((Binding.name (f ^ "_typecorrect'"), []), [t_thm]) ctxt |> snd
     end)
     (filter (member op= Cogent_functions) entry_func_names)
@@ -60,7 +64,7 @@ fold (fn (f, p) => Utils.define_lemmas ("corres_" ^ #1 p)
 end
 
 (* Monomorphisation (exported to f_monomorphic) *)
-context value_sem begin
+context monomorph_sem begin
 local_setup \<open>
 fold (fn (f, thm) => Utils.define_lemmas (f ^ "_monomorphic") [thm] #> snd)
      (Symtab.dest monoexpr_thms |> filter (member op= entry_func_names o fst))
@@ -78,10 +82,10 @@ fold (fn (f, thm) => Utils.define_lemmas (f ^ "_normalised") [thm] #> snd)
 (* Initialise final locale. *)
 locale Random_seed_cogent_shallow =
   "random_seed" + correspondence +
-  constrains val_abs_typing :: "'b \<Rightarrow> name \<Rightarrow> type list \<Rightarrow> bool"
-         and upd_abs_typing :: "abstyp \<Rightarrow> name \<Rightarrow> type list \<Rightarrow> sigil \<Rightarrow> ptrtyp set \<Rightarrow> ptrtyp set \<Rightarrow> (funtyp, abstyp, ptrtyp) store \<Rightarrow> bool"
+  constrains val_abs_typing :: "(funtyp \<Rightarrow> poly_type) \<Rightarrow> 'b \<Rightarrow> name \<Rightarrow> type list \<Rightarrow> bool"
+         and upd_abs_typing :: "(funtyp \<Rightarrow> poly_type) \<Rightarrow> abstyp \<Rightarrow> name \<Rightarrow> type list \<Rightarrow> sigil \<Rightarrow> ptrtyp set \<Rightarrow> ptrtyp set \<Rightarrow> (funtyp, abstyp, ptrtyp) store \<Rightarrow> bool"
          and abs_repr       :: "abstyp \<Rightarrow> name \<times> repr list"
-         and abs_upd_val    :: "abstyp \<Rightarrow> 'b \<Rightarrow> char list \<Rightarrow> Cogent.type list \<Rightarrow> sigil \<Rightarrow> 32 word set \<Rightarrow> 32 word set \<Rightarrow> (char list, abstyp, 32 word) store \<Rightarrow> bool"
+         and abs_upd_val    :: "(funtyp \<Rightarrow> poly_type) \<Rightarrow> abstyp \<Rightarrow> 'b \<Rightarrow> char list \<Rightarrow> Cogent.type list \<Rightarrow> sigil \<Rightarrow> 32 word set \<Rightarrow> 32 word set \<Rightarrow> (char list, abstyp, 32 word) store \<Rightarrow> bool"
 
 
 sublocale Random_seed_cogent_shallow \<subseteq> Random_seed _ upd_abs_typing abs_repr

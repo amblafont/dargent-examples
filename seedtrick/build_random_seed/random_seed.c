@@ -3,7 +3,7 @@ typedef struct Seed {
 } Seed;
 
 
-#include ".c"
+#include "random_seed_generated.c"
 
 char rand ();
 

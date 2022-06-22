@@ -10,25 +10,25 @@ begin
 definition
   abbreviatedType1 :: " Cogent.type"
 where
-  "abbreviatedType1 \<equiv> TRecord [(''seed'', (TCon ''Seed'' [] (Boxed Writable undefined), Present)), (''value'', (TPrim (Num U8), Present))] Unboxed"
+  "abbreviatedType1 \<equiv> TRecord [(''seed'', (TCon ''Seed'' [] (Boxed Writable None), Present)), (''value'', (TPrim (Num U8), Present))] Unboxed"
 
 lemmas abbreviated_type_defs =
   abbreviatedType1_def
 
 definition
-  rand_with_seed_type :: " Cogent.kind list \<times>  Cogent.type \<times>  Cogent.type"
+  rand_with_seed_type :: " poly_type"
 where
-  "rand_with_seed_type \<equiv> ([], (TCon ''Seed'' [] (Boxed Writable undefined), abbreviatedType1))"
+  "rand_with_seed_type \<equiv> (0, [], {}, TCon ''Seed'' [] (Boxed Writable None), abbreviatedType1)"
 
 definition
-  main_type :: " Cogent.kind list \<times>  Cogent.type \<times>  Cogent.type"
+  main_type :: " poly_type"
 where
-  "main_type \<equiv> ([], (TCon ''Seed'' [] (Boxed Writable undefined), abbreviatedType1))"
+  "main_type \<equiv> (0, [], {}, TCon ''Seed'' [] (Boxed Writable None), abbreviatedType1)"
 
 definition
   main :: "string Cogent.expr"
 where
-  "main \<equiv> Let (Var 0) (Let (App (AFun ''rand_with_seed'' []) (Var 0)) (Take (Var 0) 0 (Let (App (AFun ''rand_with_seed'' []) (Var 0)) (Take (Var 0) 0 (Let (Member (Var 4) 1) (Let (Member (Var 2) 1) (Let (Prim (Plus U8) [Var 1, Var 0]) (Struct [TCon ''Seed'' [] (Boxed Writable undefined), TPrim (Num U8)] [Var 3, Var 0]))))))))"
+  "main \<equiv> Let (Var 0) (Let (App (AFun ''rand_with_seed'' [] []) (Var 0)) (Take (Var 0) 0 (Let (App (AFun ''rand_with_seed'' [] []) (Var 0)) (Take (Var 0) 0 (Let (Member (Var 4) 1) (Let (Member (Var 2) 1) (Let (Prim (Plus U8) [Var 1, Var 0]) (Struct [TCon ''Seed'' [] (Boxed Writable None), TPrim (Num U8)] [Var 3, Var 0]))))))))"
 
 ML \<open>
 val Cogent_functions = ["main"]

@@ -33,9 +33,9 @@ maps (fn t => case Thm.prop_of t of
     in if member (op=) Cogent_functions fun_name
  (* XXX: dodgy hack: x_fresh_cogent and uv_fresh_cogent should both be fresh names and must be bound in the definition below.
     This will fail if there is a function called x_fresh_cogent. *) 
-       then [@{mk_term "x_fresh_cogent = sint (?tag :: 32 signed word) \<and> uv_fresh_cogent = UFunction (?fun :: string expr) []"
+       then [@{mk_term "x_fresh_cogent = sint (?tag :: 32 signed word) \<and> uv_fresh_cogent = UFunction (?fun :: string expr) [] []"
                (tag, fun)} (tag_term, Syntax.read_term @{context} ("Random_seed_TypeProof." ^ fun_name))]
-       else [@{mk_term "x_fresh_cogent = sint (?tag :: 32 signed word) \<and> uv_fresh_cogent = UAFunction (?fun :: string) []"
+       else [@{mk_term "x_fresh_cogent = sint (?tag :: 32 signed word) \<and> uv_fresh_cogent = UAFunction (?fun :: string) [] []"
                (tag, fun)} (tag_term, HOLogic.mk_string fun_name)]
     end
   | _ => raise TERM ("cogent_function_val_rel gen: couldn't parse FUN_ENUM def", [Thm.prop_of t])
@@ -149,7 +149,13 @@ val (deepest_tree::_) =
     CogentCallTree_data tr =
     (Symtab.dest Cogent_main_tree |> map snd |> map CogentCallTree_data |> maximum))
 \<close>
-local_setup \<open> define_uabsfuns' deepest_tree \<close>
+
+end (* of context *)
+
+setup \<open> declare_uabsfuns deepest_tree \<close>
+
+context Random_seed begin
+
 (* change the type of entry_funcs *)
 ML \<open>
    fun CogentCallOrder_map (FirstOrderCall tree) =

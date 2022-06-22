@@ -10,16 +10,16 @@ imports "Cogent.Mono_Tac"
 begin
 
 definition
-  rename__assocs :: "(( string \<times>  Cogent.type list) \<times>  string) list"
+  rename__assocs :: "(( string \<times>  Cogent.type list \<times>  Cogent.ptr_layout list) \<times>  string) list"
 where
-  "rename__assocs \<equiv> [((''main'', Nil), ''main''), ((''rand_with_seed'', Nil), ''rand_with_seed'')]"
+  "rename__assocs \<equiv> [((''main'', Nil, Nil), ''main''), ((''rand_with_seed'', Nil, Nil), ''rand_with_seed'')]"
 
 local_setup \<open>
 gen_mono_rename Cogent_functions @{thm rename__assocs_def} "rename"
 \<close>
 
 
-context value_sem begin
+context monomorph_sem begin
 
 ML \<open>
 local
