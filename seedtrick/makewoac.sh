@@ -1,4 +1,4 @@
-COGENT_PATH=~/cogent/branches/master
+COGENT_PATH=~/cogent/branches/supplementalnonanon
 COGENT_PATH_BIN=$COGENT_PATH/cogent/.stack-work/dist/x86_64-linux-tinfo6/Cabal-2.4.0.1/build/cogent/cogent
 FILE=random_seed
 
@@ -16,7 +16,7 @@ fi
 $COGENT_PATH_BIN $FILE.cogent -g --dist-dir=$BUILD_DIR -o $FILE --root-dir=$COGENT_PATH -A  --entry-funcs=$CONF_FILE --fake-header-dir=$COGENT_PATH/cogent/lib/ 
 
 C_FILE=$FILE.c
-C_GENERATED_FILE=$FILE_generated.c
+C_GENERATED_FILE=${FILE}_generated.c
 
 mv $BUILD_DIR/$C_FILE $BUILD_DIR/$C_GENERATED_FILE
 cp $FILE.ac $BUILD_DIR/$C_FILE
