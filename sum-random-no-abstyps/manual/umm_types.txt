@@ -1,0 +1,13 @@
+Seed_C
+	dummy_C:Signed_Word 32
+
+unit_t_C
+	dummy_C:Signed_Word 32
+
+bool_t_C
+	boolean_C:Word 8
+
+t1_C
+	seed_C:Ptr Seed_C
+	value_C:Word 8
+
