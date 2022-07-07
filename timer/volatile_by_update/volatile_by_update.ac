@@ -1,0 +1,73 @@
+#define TIMER_BASE      0xc1100000
+#define TIMER_MAP_BASE  0xc1109000
+
+#define TIMER_REG_START   0x2650    // TIMER_MUX
+
+typedef unsigned char  uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int   uint32_t;
+
+typedef uint32_t uintptr_t;
+
+typedef struct {
+  void *vaddr;
+} meson_timer_config_t;
+
+typedef meson_timer_config_t VolatileTimerReg;
+
+typedef struct meson_timer_reg {
+  uint16_t timer_bits;
+  // timer_a_input_clk: 2b at 0b;
+  // timer_e_input_clk: 3b at 8b;
+  // timer_a_mode: 1b at 11b;
+  // timer_a_en: 1b at 15b;
+  uint8_t padding0;
+  uint32_t timer_a;
+  uint32_t padding1;
+  uint32_t padding2;
+  uint32_t timer_e;
+  uint32_t timer_e_hi;
+} meson_timer_reg;
+
+#include "build/volatile_by_update.c"
+
+meson_timer_reg *config_get_regs(meson_timer_config_t *config) {
+  return (void *)((uintptr_t) config->vaddr + (TIMER_BASE + TIMER_REG_START * 4 - TIMER_MAP_BASE));
+}
+
+
+$ty:((VolatileTimerReg, Meson_timer_reg_snp)) $id:get_timer_reg_snapshot($ty:(VolatileTimerReg) regs) {
+  meson_timer_reg *regs_live = config_get_regs(regs);
+  $ty:(Meson_timer_reg_snp) regs_snp;
+
+  uint16_t timer_bits = regs_live->timer_bits;
+
+  regs_snp.timer_a_mode.boolean   = (timer_bits << 11) & 0x1;
+  regs_snp.timer_a_en.boolean     = (timer_bits << 15) & 0x1;
+  regs_snp.timer_a_input_clk.uint = (timer_bits << 0) & 0x3;
+  regs_snp.timer_e_input_clk.uint = (timer_bits << 8) & 0x7;
+  regs_snp.timer_a    = regs_live->timer_a;
+  regs_snp.timer_e    = regs_live->timer_e;
+  regs_snp.timer_e_hi = regs_live->timer_e_hi;
+
+  $ty:((VolatileTimerReg, Meson_timer_reg_snp)) out;
+  out.p1 = regs;
+  out.p2 = regs_snp;
+
+  return out;
+}
+
+$ty:(VolatileTimerReg) $id:set_timer_reg_snapshot($ty:((VolatileTimerReg, Meson_timer_reg_snp)) p) {
+  meson_timer_reg *regs_live = config_get_regs(p.p1);
+  $ty:(Meson_timer_reg_snp) regs_snp = p.p2;
+  
+  regs_live->timer_bits = (regs_live->timer_bits & ~(0x1 >> 11)) | ((regs_snp.timer_a_mode.boolean & 0x1) >> 11);
+  regs_live->timer_bits = (regs_live->timer_bits & ~(0x1 >> 15)) | ((regs_snp.timer_a_en.boolean & 0x1) >> 15);
+  regs_live->timer_bits = (regs_live->timer_bits & ~(0x3 >>  0)) | ((regs_snp.timer_a_input_clk.uint & 0x3) >> 0);
+  regs_live->timer_bits = (regs_live->timer_bits & ~(0x7 >>  8)) | ((regs_snp.timer_e_input_clk.uint & 0x7) >> 8);
+  regs_live->timer_a    = regs_snp.timer_a;
+  regs_live->timer_e    = regs_snp.timer_e;
+  regs_live->timer_e_hi = regs_snp.timer_e_hi;
+
+  return p.p1;
+}

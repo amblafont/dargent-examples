@@ -1,0 +1,84 @@
+
+timestamp_timebase_1_us : U8
+timestamp_timebase_1_us = 0
+
+timeout_timebase_1_ms : U8
+timeout_timebase_1_ms = 3
+
+ns_in_us : U64
+ns_in_us = 1000
+
+type Meson_timer_reg_snp = #{
+  timer_a_mode : Bool,
+  timer_a_en : Bool,
+  timer_a_input_clk : U2,
+  timer_e_input_clk : U3,
+  timer_a : U32,
+  timer_e : U32,
+  timer_e_hi : U32
+}
+
+type VolatileTimerReg
+get_timer_reg_snapshot : VolatileTimerReg -> (VolatileTimerReg, Meson_timer_reg_snp)
+set_timer_reg_snapshot : (VolatileTimerReg, Meson_timer_reg_snp) -> VolatileTimerReg
+
+-- The regs field is, in truth, volatile, but this would not be reflected in
+-- the Cogent semantics if we just use a record. To reflect this in the semantics,
+-- we make the true type abstract, and return a snapshot via a function.
+
+type Meson_timer = {
+  regs : VolatileTimerReg,
+  disable : Bool
+}
+
+meson_init : Meson_timer -> Meson_timer
+meson_init timer =
+  let timer_wo_regs{ regs = regs } = timer
+  and (regs, regs_snp) = get_timer_reg_snapshot regs
+  and regs =
+    set_timer_reg_snapshot
+      ( regs
+      , regs_snp{ timer_a_en = True
+                , timer_e = 0
+                , timer_a_input_clk = truncate timeout_timebase_1_ms
+                , timer_e_input_clk = truncate timestamp_timebase_1_us
+                }
+      )
+  in timer_wo_regs{ regs = regs }
+
+meson_get_time : Meson_timer -> (Meson_timer, U64)
+meson_get_time (timer_wo_regs{ regs }) =
+  let (regs, regs_snp)   = get_timer_reg_snapshot regs
+  and initial_high : U64 = upcast regs_snp.timer_e_hi  !regs_snp
+  -- update snapshot
+  and (regs, regs_snp)   = get_timer_reg_snapshot regs
+  and low : U64          = upcast regs_snp.timer_e  !regs_snp
+  -- update snapshot again
+  and (regs, regs_snp)   = get_timer_reg_snapshot regs
+  and high : U64         = upcast regs_snp.timer_e_hi  !regs_snp
+  -- check that overflow did not happen
+  and low' : U64         = if high /= initial_high then upcast regs_snp.timer_e else low  !regs_snp
+  and ticks : U64        = high << 32 .|. low'
+  and time : U64         = ticks * ns_in_us
+  and timer = timer_wo_regs{ regs = regs }
+  in (timer, time)
+
+meson_set_timeout : (Meson_timer, U16, Bool) -> Meson_timer
+meson_set_timeout (timer { regs }, timeout, periodic) =
+  let (regs, regs_snp) = get_timer_reg_snapshot regs
+  and regs_snp = regs_snp{ timer_a_mode = periodic, timer_a = upcast timeout }
+  in
+    if timer.disable ! timer then
+      let regs_snp = regs_snp{ timer_a_en = True }
+      and regs = set_timer_reg_snapshot (regs, regs_snp)
+      in timer{ regs = regs, disable = False }
+    else 
+      let regs = set_timer_reg_snapshot (regs, regs_snp)
+      in timer{ regs = regs, disable = False }
+
+meson_stop_timer : Meson_timer -> Meson_timer
+meson_stop_timer timer{ regs } =
+  let (regs, regs_snp) = get_timer_reg_snapshot regs
+  and regs_snp = regs_snp{ timer_a_en = False }
+  and regs = set_timer_reg_snapshot (regs, regs_snp)
+  in timer{ regs = regs, disable = True }
