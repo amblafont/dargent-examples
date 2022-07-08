@@ -9,7 +9,7 @@ typedef unsigned int   uint32_t;
 
 typedef uint32_t uintptr_t;
 
-typedef struct {
+typedef struct meson_timer_config {
   void *vaddr;
 } meson_timer_config_t;
 
