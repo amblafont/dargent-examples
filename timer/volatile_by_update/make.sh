@@ -27,5 +27,5 @@ cogent $COGENT_FILE \
     -g --dist-dir=$BUILD_DIR -o $NAME --root-dir=$COGENT_DIR -A \
     --entry-funcs=$CONF_FILE --proof-input-c="$NAME_PP.c" --funused-dargent-accessors
 
-#if [[ $? -gt 0 ]]; then exit $?; fi
-#cp $BUILD_DIR/$NAME.table $BUILD_DIR/${NAME_PP}.table
+if [[ $? -gt 0 ]]; then exit $?; fi
+cp $BUILD_DIR/$NAME.table $BUILD_DIR/${NAME_PP}.table
